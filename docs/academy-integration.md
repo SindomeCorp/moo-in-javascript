@@ -6,7 +6,8 @@ package through a local tarball dependency and npm lockfile integrity. Its
 `dist/runtime`, retaining the package's asset layout. The app does not import
 library source or embed its lesson assessment into the library.
 
-Initial integration artifact: `moo-in-javascript-0.1.0-dev.0.tgz`, SHA-256
+Final adoption uses `moo-in-javascript-0.1.0.tgz`; its hash is recorded in the
+app’s provenance file and lockfile. Initial integration artifact: `moo-in-javascript-0.1.0-dev.0.tgz`, SHA-256
 `4890eb9caee3aadfbdd940667d2be27ffc805fd74a5102f0da80bd07f5fef030`.
 The app records this in `dist/runtime/provenance.json`.
 

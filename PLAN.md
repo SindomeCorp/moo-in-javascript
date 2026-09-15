@@ -509,7 +509,7 @@ product scope:
 ## 11. Completion checklist
 
 - [x] TypeScript source builds to importable JavaScript/declarations with MIT notices (build and packed consumer checks).
-- [ ] Independent package and pinned dependencies build from a clean checkout.
+- [x] Independent package and pinned dependencies build from a clean checkout (scripts/test-checkout.mjs; full unit/browser/packed gates).
 - [x] LambdaMOO/ToastStunt profiles and support matrix are documented and tested (compatibility.md, semantics.md and both-profile suites).
 - [x] Broad beginner syntax, maps, inheritance and programmable object APIs work (runtime/world suites and reviewed corpus; explicit exclusions documented).
 - [x] Actual runtime results for the six lesson scenarios pass tests (both profiles; tests/academy.test.mjs).

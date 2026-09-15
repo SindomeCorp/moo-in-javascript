@@ -20,10 +20,14 @@ complete MOO server or every builtin.
 | M6 independent academy adoption | academy-integration.md; local tarball install, 6 app Node groups and 10 browser tests, actual output/state, alternate inputs, fresh runs |
 | No server, no eval/new Function, no native addon required | owned AST evaluator, default registry, npm dependencies; isolated build and consumer tests |
 | CI | .github/workflows/ci.yml installs pinned dependencies and runs unit/browser/package gates on Node 22; no remote CI run is claimed |
-| Clean Git checkout | Final verification pending below |
+| Clean Git checkout | scripts/test-checkout.mjs: committed source 5cb31a4f70c8eb93bdc66e7ae6601c69fc61f2af passed npm ci, all 67 unit groups, 6 browser tests and packed consumer tests |
 
 Known boundaries are documented, not silent approximations: permission/task/server
 facilities, waifs/anonymous objects, lifecycle hooks, full builtin coverage,
 pinned grammar lexical gaps, printable-ASCII source strings and UTF-16 host-data
 extensions. Floating/integer policies and profile-specific source quirks are
 explicit. No local or remote MOO server or database dump is required.
+
+The final release documentation is recorded in the following commit; subsequent
+verification also runs from its clean checkout. Academy uses the 0.1.0 tarball.
+No publishing, deployment or remote CI result is claimed.

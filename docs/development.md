@@ -87,3 +87,8 @@ checks out both pinned submodules independently, installs fresh dependencies wit
 `npm ci`, and runs the full unit suite. It uses no existing dist or node_modules
 and removes the temporary directory afterward. This verifies source completeness
 while changes are still uncommitted; final Git checkout verification is separate.
+
+`npm run test:checkout` clones committed HEAD into a temporary directory, uses
+local submodule mirrors at the committed gitlink revisions, runs fresh npm ci,
+and executes unit, browser and packed-consumer gates. It removes the checkout
+afterward. Set MOO_BROWSER_EXECUTABLE when using an existing browser install.
