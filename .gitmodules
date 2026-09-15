@@ -1,0 +1,6 @@
+[submodule "vendor/tree-sitter-moo"]
+	path = vendor/tree-sitter-moo
+	url = https://github.com/SindomeCorp/tree-sitter-moo
+[submodule "vendor/moo-for-llms"]
+	path = vendor/moo-for-llms
+	url = https://github.com/SindomeCorp/moo-for-llms

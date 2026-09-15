@@ -1,0 +1,72 @@
+{
+  "name": "moo-in-javascript",
+  "version": "0.1.0",
+  "description": "An independent educational MOO interpreter for JavaScript.",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "node scripts/assets.mjs && tsc && node scripts/bundle.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "test:browser": "npm run build && playwright test",
+    "test:package": "npm run build && node scripts/test-package.mjs",
+    "prepack": "npm run build",
+    "rebuild:grammar": "node scripts/rebuild-grammar.mjs",
+    "example:node": "npm run build && node examples/node.mjs",
+    "example:browser": "npm run build && node scripts/serve.mjs",
+    "test:clean": "node scripts/test-clean.mjs",
+    "test:checkout": "node scripts/test-checkout.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "web-tree-sitter": "0.25.10"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@types/node": "24.10.1",
+    "esbuild": "0.25.12",
+    "typescript": "5.9.3"
+  },
+  "types": "./dist/index.d.ts",
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist",
+    "assets",
+    "LICENSE",
+    "README.md",
+    "docs",
+    "examples"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./worker": "./dist/worker/browser.js",
+    "./assets/*": "./assets/*",
+    "./browser": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/browser/index.js"
+    },
+    "./fixtures": {
+      "types": "./dist/fixtures/index.d.ts",
+      "import": "./dist/fixtures/index.js"
+    },
+    "./browser/fixtures": {
+      "types": "./dist/fixtures/index.d.ts",
+      "import": "./dist/browser/fixtures.js"
+    },
+    "./node-worker": {
+      "types": "./dist/worker/node-client.d.ts",
+      "import": "./dist/worker/node-client.js"
+    },
+    "./worker-handler": {
+      "types": "./dist/worker/handler.d.ts",
+      "import": "./dist/worker/handler.js"
+    }
+  }
+}

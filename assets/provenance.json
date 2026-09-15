@@ -1,0 +1,17 @@
+{
+  "grammar": {
+    "repository": "https://github.com/SindomeCorp/tree-sitter-moo",
+    "revision": "5e42672ffa1a4e955fe6a04da534396282522242",
+    "version": "0.2.16"
+  },
+  "runtime": {
+    "package": "web-tree-sitter",
+    "version": "0.25.10"
+  },
+  "sha256": {
+    "tree-sitter-moo.wasm": "f3fb4427daff3de7fbd9d595fd7b1816a1b6fbb594567200f30a565605fb3af2",
+    "tree-sitter.wasm": "f38dcc4b43b818f9a0785bc1c6d5611a75ac4cdd428ff3f02757c34ca4e46d7f",
+    "tree-sitter-moo.LICENSE": "784cb48272d66f1a7a7d000074ce7cbb969b112b34c024f6533fb860cb736ea7",
+    "web-tree-sitter.LICENSE": "5f9cf9fb6acb1972b35ae29119ce563bb60ec097656bc4b69b9bac2d04c7a147"
+  }
+}

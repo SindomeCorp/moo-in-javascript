@@ -1,0 +1,9 @@
+{
+  "revision": "5e42672ffa1a4e955fe6a04da534396282522242",
+  "cli": "tree-sitter 0.25.10 (da6fe9beb4f7f67beb75914ca8e0d48ae48d6406)",
+  "image": "emscripten/emsdk@sha256:47d573d5a86379a06f850de200d69407e6baa2d2f9c19d9e156a67db57f80f2f",
+  "parserSha256": "17d83a963cf3632481d4032bd431d14ab67b48e90eb27bcbadf0b323eb1ad1ae",
+  "rebuiltSha256": "f3fb4427daff3de7fbd9d595fd7b1816a1b6fbb594567200f30a565605fb3af2",
+  "upstreamSha256": "f3fb4427daff3de7fbd9d595fd7b1816a1b6fbb594567200f30a565605fb3af2",
+  "repeatedBuildsMatch": true
+}

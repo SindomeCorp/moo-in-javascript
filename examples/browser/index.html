@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MOO playground</title>
+<style>
+body { max-width: 850px; margin: 2rem auto; padding: 0 1rem; font: 16px system-ui; background: #f8fafc; color: #172033; }
+textarea { box-sizing: border-box; width: 100%; font: 15px monospace; padding: .75rem; }
+button, select { padding: .5rem .8rem; margin: .3rem .2rem .3rem 0; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #fff; padding: 1rem; border: 1px solid #cbd5e1; min-height: 2rem; }
+label { display: block; margin-top: 1rem; }
+</style>
+<h1>MOO playground</h1>
+<p>Run verb bodies as learner #7 in room #42. Changes carry over between runs.
+Reset restores the teaching world. Stop discards the current run's changes.</p>
+<label for="profile">Compatibility profile</label>
+<select id="profile"><option value="lambdamoo">LambdaMOO</option><option value="toaststunt">ToastStunt</option></select>
+<label for="source">MOO source</label>
+<textarea id="source" rows="8">this.lamp_on = !this.lamp_on;
+player:tell("Lamp: ", this.lamp_on);
+return this.lamp_on;</textarea>
+<div><button id="run" disabled>Run</button><button id="stop" disabled>Stop</button><button id="reset" disabled>Reset world</button></div>
+<p id="status" role="status">Loading…</p>
+<h2>Output</h2><pre id="output" aria-live="polite"></pre>
+<h2>Result and diagnostics</h2><pre id="result"></pre>
+<h2>Committed world</h2><pre id="world"></pre>
+<label for="snapshot">World snapshot (JSON)</label>
+<textarea id="snapshot" rows="5" placeholder="Save the world here, or paste a saved snapshot to load."></textarea>
+<button id="save" disabled>Save snapshot</button><button id="load" disabled>Load snapshot</button>
+<script type="module" src="./playground.js"></script>
+</html>

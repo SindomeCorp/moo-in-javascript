@@ -1,0 +1,1209 @@
+{
+  "version": 1,
+  "upstream": {
+    "repository": "https://github.com/SindomeCorp/moo-for-llms",
+    "revision": "d7d75840ec829157498cfc524df8794136723830",
+    "licensePath": "LICENSE"
+  },
+  "review": {
+    "method": "Manual static tracing against cited language semantics; no interpreter-generated expected results.",
+    "references": [
+      "https://lambda.moo.mud.org/pub/MOO/ProgrammersManual.html",
+      "https://github.com/lisdude/toaststunt/tree/aecc51e9449c6e7c95272f0f044b5ba38948459e"
+    ],
+    "date": "2026-09-15"
+  },
+  "cases": [
+    {
+      "id": "stable-partition-basic",
+      "path": "examples/lists/stable-partition.moo",
+      "sha256": "852f6bbe5231693be9570c252e9b276e087b03aa221b9d43b9688a3df3e20446",
+      "metadata": {
+        "title": "stable-partition",
+        "dialect": "portable",
+        "source": "original",
+        "license": "MIT",
+        "topic": "lists",
+        "callable": "programmatic",
+        "args": "LIST values, LIST keepers",
+        "returns": "LIST",
+        "notes": "Shows stable partitioning without losing original order."
+      },
+      "profiles": [
+        "lambdamoo",
+        "toaststunt"
+      ],
+      "features": [
+        "scatter",
+        "membership",
+        "list-splice",
+        "for-list"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": [
+          {
+            "type": "list",
+            "value": [
+              {
+                "type": "string",
+                "value": "a"
+              },
+              {
+                "type": "string",
+                "value": "b"
+              },
+              {
+                "type": "string",
+                "value": "a"
+              }
+            ]
+          },
+          {
+            "type": "list",
+            "value": [
+              {
+                "type": "string",
+                "value": "a"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "status": "completed",
+        "value": {
+          "type": "list",
+          "value": [
+            {
+              "type": "string",
+              "value": "a"
+            },
+            {
+              "type": "string",
+              "value": "a"
+            },
+            {
+              "type": "string",
+              "value": "b"
+            }
+          ]
+        },
+        "output": [],
+        "changes": []
+      },
+      "evidence": "Membership selects the first and third a; splicing appends the sole miss b after them."
+    },
+    {
+      "id": "stable-partition-casefold",
+      "path": "examples/lists/stable-partition.moo",
+      "sha256": "852f6bbe5231693be9570c252e9b276e087b03aa221b9d43b9688a3df3e20446",
+      "metadata": {
+        "title": "stable-partition",
+        "dialect": "portable",
+        "source": "original",
+        "license": "MIT",
+        "topic": "lists",
+        "callable": "programmatic",
+        "args": "LIST values, LIST keepers",
+        "returns": "LIST",
+        "notes": "Shows stable partitioning without losing original order."
+      },
+      "profiles": [
+        "lambdamoo",
+        "toaststunt"
+      ],
+      "features": [
+        "scatter",
+        "membership",
+        "list-splice",
+        "for-list"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": [
+          {
+            "type": "list",
+            "value": [
+              {
+                "type": "string",
+                "value": "A"
+              },
+              {
+                "type": "string",
+                "value": "b"
+              },
+              {
+                "type": "string",
+                "value": "a"
+              }
+            ]
+          },
+          {
+            "type": "list",
+            "value": [
+              {
+                "type": "string",
+                "value": "a"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "status": "completed",
+        "value": {
+          "type": "list",
+          "value": [
+            {
+              "type": "string",
+              "value": "A"
+            },
+            {
+              "type": "string",
+              "value": "a"
+            },
+            {
+              "type": "string",
+              "value": "b"
+            }
+          ]
+        },
+        "output": [],
+        "changes": []
+      },
+      "evidence": "Case-insensitive membership selects A and a while retaining their original spellings and order."
+    },
+    {
+      "id": "stable-partition-empty",
+      "path": "examples/lists/stable-partition.moo",
+      "sha256": "852f6bbe5231693be9570c252e9b276e087b03aa221b9d43b9688a3df3e20446",
+      "metadata": {
+        "title": "stable-partition",
+        "dialect": "portable",
+        "source": "original",
+        "license": "MIT",
+        "topic": "lists",
+        "callable": "programmatic",
+        "args": "LIST values, LIST keepers",
+        "returns": "LIST",
+        "notes": "Shows stable partitioning without losing original order."
+      },
+      "profiles": [
+        "lambdamoo",
+        "toaststunt"
+      ],
+      "features": [
+        "scatter",
+        "membership",
+        "list-splice",
+        "for-list"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": [
+          {
+            "type": "list",
+            "value": []
+          },
+          {
+            "type": "list",
+            "value": [
+              {
+                "type": "string",
+                "value": "a"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "status": "completed",
+        "value": {
+          "type": "list",
+          "value": []
+        },
+        "output": [],
+        "changes": []
+      },
+      "evidence": "An empty input runs no loop iterations; both splice sources remain empty."
+    },
+    {
+      "id": "alist-increment-existing",
+      "path": "examples/lists/alist-increment-count.moo",
+      "sha256": "7a04fb34ae887128288370637bc95ef063a311baa779d44a9d797cde9d325c17",
+      "metadata": {
+        "title": "alist-increment-count",
+        "dialect": "portable",
+        "source": "original",
+        "license": "MIT",
+        "topic": "lists",
+        "callable": "programmatic",
+        "args": "LIST rows, ANY key",
+        "returns": "LIST",
+        "notes": "Shows portable frequency counting with alist rows instead of ToastStunt maps."
+      },
+      "profiles": [
+        "lambdamoo",
+        "toaststunt"
+      ],
+      "features": [
+        "nested-index-assignment",
+        "for-range",
+        "return"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": [
+          {
+            "type": "list",
+            "value": [
+              {
+                "type": "list",
+                "value": [
+                  {
+                    "type": "string",
+                    "value": "x"
+                  },
+                  {
+                    "type": "int",
+                    "value": "1"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "string",
+            "value": "x"
+          }
+        ]
+      },
+      "expected": {
+        "status": "completed",
+        "value": {
+          "type": "list",
+          "value": [
+            {
+              "type": "list",
+              "value": [
+                {
+                  "type": "string",
+                  "value": "x"
+                },
+                {
+                  "type": "int",
+                  "value": "2"
+                }
+              ]
+            }
+          ]
+        },
+        "output": [],
+        "changes": []
+      },
+      "evidence": "The matching first row replaces count 1 with 1+1; early return preserves the row list."
+    },
+    {
+      "id": "alist-increment-new",
+      "path": "examples/lists/alist-increment-count.moo",
+      "sha256": "7a04fb34ae887128288370637bc95ef063a311baa779d44a9d797cde9d325c17",
+      "metadata": {
+        "title": "alist-increment-count",
+        "dialect": "portable",
+        "source": "original",
+        "license": "MIT",
+        "topic": "lists",
+        "callable": "programmatic",
+        "args": "LIST rows, ANY key",
+        "returns": "LIST",
+        "notes": "Shows portable frequency counting with alist rows instead of ToastStunt maps."
+      },
+      "profiles": [
+        "lambdamoo",
+        "toaststunt"
+      ],
+      "features": [
+        "nested-index-assignment",
+        "for-range",
+        "return"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": [
+          {
+            "type": "list",
+            "value": [
+              {
+                "type": "list",
+                "value": [
+                  {
+                    "type": "string",
+                    "value": "x"
+                  },
+                  {
+                    "type": "int",
+                    "value": "1"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "string",
+            "value": "y"
+          }
+        ]
+      },
+      "expected": {
+        "status": "completed",
+        "value": {
+          "type": "list",
+          "value": [
+            {
+              "type": "list",
+              "value": [
+                {
+                  "type": "string",
+                  "value": "x"
+                },
+                {
+                  "type": "int",
+                  "value": "1"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "value": [
+                {
+                  "type": "string",
+                  "value": "y"
+                },
+                {
+                  "type": "int",
+                  "value": "1"
+                }
+              ]
+            }
+          ]
+        },
+        "output": [],
+        "changes": []
+      },
+      "evidence": "No row matches y; final splice appends a new row with count one."
+    },
+    {
+      "id": "windowed-slices",
+      "path": "examples/lists/windowed-slices.moo",
+      "sha256": "3c3f679714671f4a129fea6ef893de63dc73500fd8b742558f9e1f46fc37d214",
+      "metadata": {
+        "title": "windowed-slices",
+        "dialect": "portable",
+        "source": "original",
+        "license": "MIT",
+        "topic": "lists",
+        "callable": "programmatic",
+        "args": "LIST values, INT size",
+        "returns": "LIST|ERR",
+        "notes": "Shows producing overlapping list windows using portable range slicing."
+      },
+      "profiles": [
+        "lambdamoo",
+        "toaststunt"
+      ],
+      "features": [
+        "type-check",
+        "slices",
+        "for-range"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": [
+          {
+            "type": "list",
+            "value": [
+              {
+                "type": "int",
+                "value": "1"
+              },
+              {
+                "type": "int",
+                "value": "2"
+              },
+              {
+                "type": "int",
+                "value": "3"
+              }
+            ]
+          },
+          {
+            "type": "int",
+            "value": "2"
+          }
+        ]
+      },
+      "expected": {
+        "status": "completed",
+        "value": {
+          "type": "list",
+          "value": [
+            {
+              "type": "list",
+              "value": [
+                {
+                  "type": "int",
+                  "value": "1"
+                },
+                {
+                  "type": "int",
+                  "value": "2"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "value": [
+                {
+                  "type": "int",
+                  "value": "2"
+                },
+                {
+                  "type": "int",
+                  "value": "3"
+                }
+              ]
+            }
+          ]
+        },
+        "output": [],
+        "changes": []
+      },
+      "evidence": "The upper loop bound is 3-2+1=2; inclusive windows are indices 1..2 and 2..3."
+    },
+    {
+      "id": "window-too-large",
+      "path": "examples/lists/windowed-slices.moo",
+      "sha256": "3c3f679714671f4a129fea6ef893de63dc73500fd8b742558f9e1f46fc37d214",
+      "metadata": {
+        "title": "windowed-slices",
+        "dialect": "portable",
+        "source": "original",
+        "license": "MIT",
+        "topic": "lists",
+        "callable": "programmatic",
+        "args": "LIST values, INT size",
+        "returns": "LIST|ERR",
+        "notes": "Shows producing overlapping list windows using portable range slicing."
+      },
+      "profiles": [
+        "lambdamoo",
+        "toaststunt"
+      ],
+      "features": [
+        "type-check",
+        "slices",
+        "for-range"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": [
+          {
+            "type": "list",
+            "value": [
+              {
+                "type": "int",
+                "value": "1"
+              },
+              {
+                "type": "int",
+                "value": "2"
+              }
+            ]
+          },
+          {
+            "type": "int",
+            "value": "3"
+          }
+        ]
+      },
+      "expected": {
+        "status": "completed",
+        "value": {
+          "type": "list",
+          "value": []
+        },
+        "output": [],
+        "changes": []
+      },
+      "evidence": "The upper range bound is zero, so the loop does not execute."
+    },
+    {
+      "id": "window-invalid-size",
+      "path": "examples/lists/windowed-slices.moo",
+      "sha256": "3c3f679714671f4a129fea6ef893de63dc73500fd8b742558f9e1f46fc37d214",
+      "metadata": {
+        "title": "windowed-slices",
+        "dialect": "portable",
+        "source": "original",
+        "license": "MIT",
+        "topic": "lists",
+        "callable": "programmatic",
+        "args": "LIST values, INT size",
+        "returns": "LIST|ERR",
+        "notes": "Shows producing overlapping list windows using portable range slicing."
+      },
+      "profiles": [
+        "lambdamoo",
+        "toaststunt"
+      ],
+      "features": [
+        "type-check",
+        "slices",
+        "for-range"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": [
+          {
+            "type": "list",
+            "value": [
+              {
+                "type": "int",
+                "value": "1"
+              },
+              {
+                "type": "int",
+                "value": "2"
+              }
+            ]
+          },
+          {
+            "type": "int",
+            "value": "0"
+          }
+        ]
+      },
+      "expected": {
+        "status": "completed",
+        "value": {
+          "type": "error",
+          "value": "E_INVARG"
+        },
+        "output": [],
+        "changes": []
+      },
+      "evidence": "The explicit size<1 branch returns an error value; it does not raise it."
+    },
+    {
+      "id": "split-first-delimiter",
+      "path": "examples/strings/split-first-delimiter.moo",
+      "sha256": "ad72c82b386c18c72cabc69b1b9137b93d30c992e04d10960d6145ec680d87fa",
+      "metadata": {
+        "title": "split-first-delimiter",
+        "dialect": "portable",
+        "source": "original",
+        "license": "MIT",
+        "topic": "strings",
+        "callable": "programmatic",
+        "args": "STR text, STR delimiter",
+        "returns": "LIST",
+        "notes": "Shows splitting only on the first delimiter without losing remaining text."
+      },
+      "profiles": [
+        "lambdamoo",
+        "toaststunt"
+      ],
+      "features": [
+        "index-builtin",
+        "string-slices",
+        "dollar-index"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": [
+          {
+            "type": "string",
+            "value": "left=right=tail"
+          },
+          {
+            "type": "string",
+            "value": "="
+          }
+        ]
+      },
+      "expected": {
+        "status": "completed",
+        "value": {
+          "type": "list",
+          "value": [
+            {
+              "type": "string",
+              "value": "left"
+            },
+            {
+              "type": "string",
+              "value": "right=tail"
+            }
+          ]
+        },
+        "output": [],
+        "changes": []
+      },
+      "evidence": "The first equals sign is position five; slices are 1..4 and 6..15."
+    },
+    {
+      "id": "split-no-delimiter",
+      "path": "examples/strings/split-first-delimiter.moo",
+      "sha256": "ad72c82b386c18c72cabc69b1b9137b93d30c992e04d10960d6145ec680d87fa",
+      "metadata": {
+        "title": "split-first-delimiter",
+        "dialect": "portable",
+        "source": "original",
+        "license": "MIT",
+        "topic": "strings",
+        "callable": "programmatic",
+        "args": "STR text, STR delimiter",
+        "returns": "LIST",
+        "notes": "Shows splitting only on the first delimiter without losing remaining text."
+      },
+      "profiles": [
+        "lambdamoo",
+        "toaststunt"
+      ],
+      "features": [
+        "index-builtin",
+        "string-slices",
+        "dollar-index"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": [
+          {
+            "type": "string",
+            "value": "left"
+          },
+          {
+            "type": "string",
+            "value": "="
+          }
+        ]
+      },
+      "expected": {
+        "status": "completed",
+        "value": {
+          "type": "list",
+          "value": [
+            {
+              "type": "string",
+              "value": "left"
+            },
+            {
+              "type": "string",
+              "value": ""
+            }
+          ]
+        },
+        "output": [],
+        "changes": []
+      },
+      "evidence": "index returns zero; the explicit no-match branch retains the entire input."
+    },
+    {
+      "id": "split-initial-delimiter",
+      "path": "examples/strings/split-first-delimiter.moo",
+      "sha256": "ad72c82b386c18c72cabc69b1b9137b93d30c992e04d10960d6145ec680d87fa",
+      "metadata": {
+        "title": "split-first-delimiter",
+        "dialect": "portable",
+        "source": "original",
+        "license": "MIT",
+        "topic": "strings",
+        "callable": "programmatic",
+        "args": "STR text, STR delimiter",
+        "returns": "LIST",
+        "notes": "Shows splitting only on the first delimiter without losing remaining text."
+      },
+      "profiles": [
+        "lambdamoo",
+        "toaststunt"
+      ],
+      "features": [
+        "index-builtin",
+        "string-slices",
+        "dollar-index"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": [
+          {
+            "type": "string",
+            "value": "=right"
+          },
+          {
+            "type": "string",
+            "value": "="
+          }
+        ]
+      },
+      "expected": {
+        "status": "completed",
+        "value": {
+          "type": "list",
+          "value": [
+            {
+              "type": "string",
+              "value": ""
+            },
+            {
+              "type": "string",
+              "value": "right"
+            }
+          ]
+        },
+        "output": [],
+        "changes": []
+      },
+      "evidence": "Position one produces the valid empty slice 1..0, then the suffix starting at two."
+    },
+    {
+      "id": "error-rethrow-default",
+      "path": "examples/errors/error-rethrow-unexpected.moo",
+      "sha256": "ab7c4b5c2e39ca9498f9281c3a567dd4b685d4abfba39624b2ad29a80ee690fd",
+      "metadata": {
+        "title": "error-rethrow-unexpected",
+        "dialect": "portable",
+        "source": "original",
+        "license": "MIT",
+        "topic": "errors",
+        "callable": "programmatic",
+        "args": "OBJ object",
+        "returns": "ANY",
+        "notes": "Shows catching one expected error while letting unexpected failures propagate."
+      },
+      "profiles": [
+        "lambdamoo",
+        "toaststunt"
+      ],
+      "features": [
+        "property-read",
+        "inline-catch"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": [
+          {
+            "type": "object",
+            "value": "42"
+          }
+        ]
+      },
+      "expected": {
+        "status": "completed",
+        "value": {
+          "type": "string",
+          "value": "untitled"
+        },
+        "output": [],
+        "changes": []
+      },
+      "evidence": "Teaching room has no label property; E_PROPNF selects the inline fallback."
+    },
+    {
+      "id": "error-rethrow-invalid-object",
+      "path": "examples/errors/error-rethrow-unexpected.moo",
+      "sha256": "ab7c4b5c2e39ca9498f9281c3a567dd4b685d4abfba39624b2ad29a80ee690fd",
+      "metadata": {
+        "title": "error-rethrow-unexpected",
+        "dialect": "portable",
+        "source": "original",
+        "license": "MIT",
+        "topic": "errors",
+        "callable": "programmatic",
+        "args": "OBJ object",
+        "returns": "ANY",
+        "notes": "Shows catching one expected error while letting unexpected failures propagate."
+      },
+      "profiles": [
+        "lambdamoo",
+        "toaststunt"
+      ],
+      "features": [
+        "property-read",
+        "inline-catch"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": [
+          {
+            "type": "object",
+            "value": "999"
+          }
+        ]
+      },
+      "expected": {
+        "status": "runtime-error",
+        "code": "E_INVIND",
+        "output": [],
+        "changes": []
+      },
+      "evidence": "A nonexistent object raises E_INVIND before property lookup; the E_PROPNF handler cannot catch it."
+    },
+    {
+      "id": "map-frequency",
+      "path": "examples/toaststunt/map-frequency-count.moo",
+      "sha256": "b5dd81d2aa17249df1a508583d48e2baf3d943188c2c4d35bdf63a288a9bbea9",
+      "metadata": {
+        "title": "map-frequency-count",
+        "dialect": "toaststunt",
+        "dialect_reason": "Uses ToastStunt MAP literal and map indexing.",
+        "source": "original",
+        "license": "MIT",
+        "topic": "toaststunt",
+        "callable": "programmatic",
+        "args": "LIST values",
+        "returns": "MAP",
+        "notes": "ToastStunt-specific frequency table using native MAP values."
+      },
+      "profiles": [
+        "toaststunt"
+      ],
+      "features": [
+        "map",
+        "inline-catch",
+        "indexed-assignment"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": [
+          {
+            "type": "list",
+            "value": [
+              {
+                "type": "string",
+                "value": "b"
+              },
+              {
+                "type": "string",
+                "value": "a"
+              },
+              {
+                "type": "string",
+                "value": "b"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "status": "completed",
+        "value": {
+          "type": "map",
+          "value": [
+            [
+              {
+                "type": "string",
+                "value": "a"
+              },
+              {
+                "type": "int",
+                "value": "1"
+              }
+            ],
+            [
+              {
+                "type": "string",
+                "value": "b"
+              },
+              {
+                "type": "int",
+                "value": "2"
+              }
+            ]
+          ]
+        },
+        "output": [],
+        "changes": []
+      },
+      "evidence": "Each missing key catches E_RANGE and starts at zero; b increments twice and a once. Map key order is a,b."
+    },
+    {
+      "id": "map-lambda-rejected",
+      "path": "examples/toaststunt/map-frequency-count.moo",
+      "sha256": "b5dd81d2aa17249df1a508583d48e2baf3d943188c2c4d35bdf63a288a9bbea9",
+      "metadata": {
+        "title": "map-frequency-count",
+        "dialect": "toaststunt",
+        "dialect_reason": "Uses ToastStunt MAP literal and map indexing.",
+        "source": "original",
+        "license": "MIT",
+        "topic": "toaststunt",
+        "callable": "programmatic",
+        "args": "LIST values",
+        "returns": "MAP",
+        "notes": "ToastStunt-specific frequency table using native MAP values."
+      },
+      "profiles": [
+        "lambdamoo"
+      ],
+      "features": [
+        "map",
+        "inline-catch",
+        "indexed-assignment"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": [
+          {
+            "type": "list",
+            "value": [
+              {
+                "type": "string",
+                "value": "a"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "status": "unsupported-feature",
+        "output": [],
+        "changes": []
+      },
+      "evidence": "LambdaMOO rejects the map literal before the body executes."
+    },
+    {
+      "id": "map-values-sum",
+      "path": "examples/toaststunt/map-values-sum.moo",
+      "sha256": "e5d600c134f97d3178b3a2e68305e2a848601d25032875fed0a13dafae4f7d68",
+      "metadata": {
+        "title": "toaststunt-map-values-sum",
+        "dialect": "toaststunt",
+        "dialect_reason": "Uses ToastStunt mapvalues() builtin.",
+        "source": "original",
+        "license": "MIT",
+        "topic": "maps",
+        "callable": "programmatic",
+        "args": "MAP counts",
+        "returns": "INT",
+        "notes": "Shows iterating native map values without converting through an alist."
+      },
+      "profiles": [
+        "toaststunt"
+      ],
+      "features": [
+        "mapvalues",
+        "for-list"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": [
+          {
+            "type": "map",
+            "value": [
+              [
+                {
+                  "type": "string",
+                  "value": "a"
+                },
+                {
+                  "type": "int",
+                  "value": "2"
+                }
+              ],
+              [
+                {
+                  "type": "string",
+                  "value": "b"
+                },
+                {
+                  "type": "int",
+                  "value": "3"
+                }
+              ]
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "status": "completed",
+        "value": {
+          "type": "int",
+          "value": "5"
+        },
+        "output": [],
+        "changes": []
+      },
+      "evidence": "mapvalues supplies 2 and 3; accumulation starts at zero."
+    },
+    {
+      "id": "fork-rejected",
+      "path": "examples/syntax/fork-block.moo",
+      "sha256": "afe609370d55d0b7222edce03eea50fd02ce0b59318127be41d0d3d8be237637",
+      "metadata": {
+        "title": "fork-block",
+        "dialect": "portable",
+        "source": "original",
+        "license": "MIT",
+        "topic": "syntax",
+        "callable": "programmatic",
+        "args": "none",
+        "returns": "INT",
+        "notes": "Compile-tested against a live MOO scratch verb. Fork examples are syntax-only; prefer scheduler utilities for production task orchestration when a core provides them."
+      },
+      "profiles": [
+        "lambdamoo",
+        "toaststunt"
+      ],
+      "features": [
+        "unsupported-fork"
+      ],
+      "fixture": "teaching-v1",
+      "context": {
+        "this": {
+          "type": "object",
+          "value": "42"
+        },
+        "player": {
+          "type": "object",
+          "value": "7"
+        },
+        "args": []
+      },
+      "expected": {
+        "status": "unsupported-feature",
+        "output": [],
+        "changes": []
+      },
+      "evidence": "Fork scheduling is explicitly outside both execution profiles; reject even the preceding assignment."
+    }
+  ]
+}
