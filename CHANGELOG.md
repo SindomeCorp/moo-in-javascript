@@ -3,7 +3,9 @@
 Release notes are maintained manually. This package is pre-1.0; compatibility
 changes are called out here before publication.
 
-## 0.2.3 — Initial public release (prepared, not yet published)
+## 0.2.3 — 2026-09-17
+
+Initial public release on [npm](https://www.npmjs.com/package/@sindomecorp/moo-in-javascript/v/0.2.3).
 
 - Introduces the public `@sindomecorp/moo-in-javascript` package for Node.js and
   browsers, with JavaScript ESM, TypeScript declarations, and bundled WASM assets.

@@ -9,8 +9,10 @@ executable path to use an existing compatible Chromium installation for browser
 and packed-consumer tests. On Linux, Playwright's `--with-deps` option also
 installs system libraries when needed.
 
-Start with [Contributing](../CONTRIBUTING.md) for a fresh clone. Maintainers should
-also read [Releasing](releasing.md).
+To use the published library in an application, run
+`npm install @sindomecorp/moo-in-javascript`; building from source is unnecessary.
+Start with [Contributing](../CONTRIBUTING.md) for source development in a fresh
+clone. Maintainers should also read [Releasing](releasing.md).
 
 ```sh
 git submodule update --init --recursive

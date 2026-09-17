@@ -11,7 +11,8 @@ lessons, playgrounds, simulations, or applications that run MOO verb bodies agai
 an in-memory world. It is written in TypeScript and ships JavaScript ESM and type
 declarations.
 
-**Status:** pre-1.0, currently version 0.2.3. The documented subset includes
+**Status:** published on [npm](https://www.npmjs.com/package/@sindomecorp/moo-in-javascript),
+currently version 0.2.3 (pre-1.0). The documented subset includes
 expressions, control flow, objects, source verbs, snapshots, and worker execution.
 It is not a complete MOO server or a drop-in replacement for either upstream
 implementation. See [compatibility](https://github.com/SindomeCorp/moo-in-javascript/blob/main/docs/compatibility.md)
@@ -28,11 +29,18 @@ worker limitation documented in the compatibility guide. The package is ESM-only
 npm install @sindomecorp/moo-in-javascript
 ```
 
-This command becomes available after the initial npm publication. Until then,
-follow [Contributing](https://github.com/SindomeCorp/moo-in-javascript/blob/main/CONTRIBUTING.md)
-to build a checkout and use `npm pack` to create an installable tarball. npm
-consumers receive compiled code and WASM assets; no compiler, submodules, or MOO
-server is required.
+Install from npm in your application directory. The package includes compiled
+JavaScript, TypeScript declarations, browser/worker bundles, and WASM assets; no
+source checkout, compiler, submodules, or MOO server is required.
+
+To install the initial release explicitly:
+
+```sh
+npm install @sindomecorp/moo-in-javascript@0.2.3
+```
+
+For source development, follow
+[Contributing](https://github.com/SindomeCorp/moo-in-javascript/blob/main/CONTRIBUTING.md).
 
 ## Node.js quick start
 
@@ -211,7 +219,7 @@ Issues and pull requests are welcome. See
 [Contributing](https://github.com/SindomeCorp/moo-in-javascript/blob/main/CONTRIBUTING.md)
 for setup, bug reports, regression tests, and review expectations. Maintainers
 use the [release guide](https://github.com/SindomeCorp/moo-in-javascript/blob/main/docs/releasing.md)
-for the initial npm publish and subsequent GitHub Release automation.
+for version updates and automated npm publication through GitHub Releases.
 
 ## License and upstream projects
 
