@@ -12,7 +12,7 @@ an in-memory world. It is written in TypeScript and ships JavaScript ESM and typ
 declarations.
 
 **Status:** published on [npm](https://www.npmjs.com/package/@sindomecorp/moo-in-javascript),
-currently version 0.2.4 (pre-1.0). The documented subset includes
+currently version 0.2.5 (pre-1.0). The documented subset includes
 expressions, control flow, objects, source verbs, snapshots, and worker execution.
 It is not a complete MOO server or a drop-in replacement for either upstream
 implementation. See [compatibility](https://github.com/SindomeCorp/moo-in-javascript/blob/main/docs/compatibility.md)
@@ -36,7 +36,7 @@ source checkout, compiler, submodules, or MOO server is required.
 To pin this release explicitly:
 
 ```sh
-npm install @sindomecorp/moo-in-javascript@0.2.4
+npm install @sindomecorp/moo-in-javascript@0.2.5
 ```
 
 For source development, follow

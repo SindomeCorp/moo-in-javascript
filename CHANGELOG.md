@@ -3,7 +3,17 @@
 Release notes are maintained manually. This package is pre-1.0; compatibility
 changes are called out here before publication.
 
-## 0.2.4 — 2026-09-17
+## 0.2.5 — 2026-09-17
+
+- Fixes the release artifact path so npm publishes the tested local tarball
+  instead of interpreting its directory as a GitHub repository reference.
+- Includes the published-package documentation and release retry improvements
+  prepared in 0.2.4.
+
+## 0.2.4 — 2026-09-17 (GitHub only)
+
+The GitHub release passed validation, but npm publication failed before upload
+because of the artifact path. Superseded by 0.2.5.
 
 - Updates the README and installation instructions for the published npm package.
 - Records the initial release date and focuses the maintainer guide on future releases.

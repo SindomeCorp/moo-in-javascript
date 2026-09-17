@@ -104,7 +104,7 @@ afterward. Set MOO_BROWSER_EXECUTABLE when using an existing browser install.
 an already packed artifact without rebuilding or deleting it, run:
 
 ```sh
-node scripts/test-package.mjs ./sindomecorp-moo-in-javascript-0.2.4.tgz
+node scripts/test-package.mjs ./sindomecorp-moo-in-javascript-0.2.5.tgz
 ```
 
 This validates package identity and required files, then installs the exact
