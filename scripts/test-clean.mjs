@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 // Validate all source inputs in a directory with no build output or dependencies.
 const destination = await mkdtemp(join(tmpdir(), 'moo-clean-source-'));
 try {
-  for (const path of ['src', 'scripts', 'tests', 'docs', 'examples', 'package.json', 'package-lock.json', 'tsconfig.json', 'LICENSE', 'README.md']) {
+  for (const path of ['src', 'scripts', 'tests', 'docs', 'examples', 'package.json', 'package-lock.json', 'tsconfig.json', 'LICENSE', 'README.md', 'CONTRIBUTING.md', 'CHANGELOG.md']) {
     await cp(path, join(destination, path), { recursive: true });
   }
   await mkdir(join(destination, 'vendor'));

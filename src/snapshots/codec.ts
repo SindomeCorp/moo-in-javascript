@@ -1,21 +1,23 @@
+import { validateEnvironment, type HostEnvironment } from '../host/environment.js';
 import { assertProfile, HostError, type Profile } from '../parser/index.js';
 import { World, type WorldLimits, type ObjectData, type PropertyData, type VerbData } from '../world/index.js';
 import { encodeValue, decodeValue, type EncodedValue } from '../values/index.js';
 import type { Diagnostic } from '../ast/source.js';
 
 export interface SnapshotLimits { maxCharacters?: number; maxNodes?: number; maxDepth?: number }
-export interface LoadWorldOptions { world?: World; worldLimits?: WorldLimits; limits?: SnapshotLimits }
+export interface LoadWorldOptions { unsupportedSourcePolicy?: 'reject' | 'retain'; world?: World; worldLimits?: WorldLimits; limits?: SnapshotLimits }
 export interface SnapshotCompiler {
   readonly profile: Profile;
   compile(source: string): { ok: true } | { ok: false; diagnostics: readonly Diagnostic[] };
   hasHostVerb(id: string): boolean;
 }
 export interface SnapshotObject {
+  player?: boolean; location?: string; contents?: string[];
   id: string; parent: string; owner: string; name: string; flags: ObjectData['flags'];
   properties: { name: string; origin: string; owner: string; perms: string; value: EncodedValue | null }[];
   verbs: { names: string; owner: string; perms: string; args: readonly [string, string, string]; source?: string; hostId?: string }[];
 }
-export interface WorldSnapshot { version: 1; profile: Profile; nextId: string; objects: SnapshotObject[] }
+export interface WorldSnapshot { environment?: HostEnvironment; version: 1; profile: Profile; nextId: string; objects: SnapshotObject[] }
 
 function limitsFor(limits: SnapshotLimits = {}): Required<SnapshotLimits> {
   const result = { maxCharacters: limits.maxCharacters ?? 16_000_000, maxNodes: limits.maxNodes ?? 1_000_000, maxDepth: limits.maxDepth ?? 512 };
@@ -78,7 +80,7 @@ function envelope(input: unknown, limits?: SnapshotLimits): Record<string, unkno
     try { parsed = JSON.parse(input); } catch (cause) { throw new HostError('Invalid snapshot JSON', { cause }); }
   }
   checkJSON(parsed, bounds);
-  const data = record(parsed, ['version', 'profile', 'nextId', 'objects']);
+  const data = record(parsed, ['version', 'profile', 'nextId', 'objects'], ['environment']);
   if (data.version !== 1) reject('unsupported or missing snapshot version');
   assertProfile(data.profile);
   return data;
@@ -87,8 +89,11 @@ export function snapshotProfile(input: unknown, limits?: SnapshotLimits): Profil
 
 export function worldSnapshot(world: World, limits?: SnapshotLimits): WorldSnapshot {
   world.assertIdle();
-  const snapshot: WorldSnapshot = { version: 1, profile: world.profile, nextId: String(world.nextId), objects: world.objects().map(object => ({
+  const snapshot: WorldSnapshot = { ...(world.environment?{environment:structuredClone(world.environment)}:{}), version: 1, profile: world.profile, nextId: String(world.nextId), objects: world.objects().map(object => ({
     id: String(object.id), parent: String(object.parent), owner: String(object.owner), name: object.name, flags: { ...object.flags },
+    ...(object.player === undefined ? {} : { player: object.player }),
+    ...(object.location === undefined ? {} : { location: String(object.location) }),
+    ...(object.contents === undefined ? {} : { contents: object.contents.map(String) }),
     properties: object.properties.map(prop => ({ name: prop.name, origin: String(prop.origin), owner: String(prop.owner), perms: prop.perms,
       value: prop.value === null ? null : encodeValue(prop.value, { profile: world.profile }) })),
     verbs: object.verbs.map(verb => ({ names: verb.names, owner: String(verb.owner), perms: verb.perms, args: [...verb.args],
@@ -105,6 +110,7 @@ export function saveWorld(world: World, limits?: SnapshotLimits): string {
 }
 
 export function decodeWorld(input: unknown, compiler: SnapshotCompiler, options: LoadWorldOptions = {}): World {
+  if (options.unsupportedSourcePolicy !== undefined && !['reject','retain'].includes(options.unsupportedSourcePolicy)) reject('invalid unsupported source policy');
   options.world?.assertIdle();
   const data = envelope(input, options.limits), profile = data.profile as Profile;
   if (profile !== compiler.profile || (options.world && options.world.profile !== profile)) reject('snapshot, runtime and target profiles must match');
@@ -113,7 +119,8 @@ export function decodeWorld(input: unknown, compiler: SnapshotCompiler, options:
   if (rawObjects.length > world.limits.objects) reject('object limit exceeded');
   let properties = 0, verbs = 0;
   const objects: ObjectData[] = rawObjects.map(raw => {
-    const object = record(raw, ['id', 'parent', 'owner', 'name', 'flags', 'properties', 'verbs']);
+    const object = record(raw, ['id', 'parent', 'owner', 'name', 'flags', 'properties', 'verbs'], ['player','location','contents']);
+    if (object.player !== undefined && typeof object.player !== 'boolean') reject('player must be boolean');
     const flags = record(object.flags, ['programmer', 'wizard', 'r', 'w', 'f']);
     for (const flag of Object.values(flags)) if (flag !== 0 && flag !== 1) reject('flags must be zero or one');
     const rawProperties = array(object.properties), rawVerbs = array(object.verbs);
@@ -134,15 +141,19 @@ export function decodeWorld(input: unknown, compiler: SnapshotCompiler, options:
         ...(Object.hasOwn(verb, 'hostId') ? { source: '', hostId: string(verb.hostId) } : { source: string(verb.source) }) };
     });
     return { id: decimal(object.id), parent: decimal(object.parent), owner: decimal(object.owner), name: string(object.name),
+      ...(object.player === undefined ? {} : { player: object.player as boolean }),
+      ...(object.location === undefined ? {} : { location: decimal(object.location) }),
+      ...(object.contents === undefined ? {} : { contents: array(object.contents).map(decimal) }),
       flags: flags as unknown as ObjectData['flags'], properties: propertyRecords, verbs: verbRecords };
   });
-  world.restore(objects, decimal(data.nextId));
+  if(data.environment!==undefined)validateEnvironment(data.environment);
+  world.restore(objects, decimal(data.nextId), data.environment);
   for (const object of world.objects()) for (const verb of object.verbs) {
     if (verb.hostId !== undefined) {
       if (!compiler.hasHostVerb(verb.hostId)) reject('host verb registration is unavailable: ' + verb.hostId);
     } else {
       const result = compiler.compile(verb.source);
-      if (!result.ok) reject('verb #' + object.id + ':' + verb.names + ' does not compile: ' + result.diagnostics.map(diagnostic => diagnostic.message).join('; '));
+      if (!result.ok && !(options.unsupportedSourcePolicy === 'retain' && result.diagnostics.every(d => d.category === 'unsupported-feature'))) reject('verb #' + object.id + ':' + verb.names + ' does not compile: ' + result.diagnostics.map(diagnostic => diagnostic.message).join('; '));
     }
   }
   if (options.world) { options.world.replaceWith(world); return options.world; }

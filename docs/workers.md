@@ -2,12 +2,12 @@
 
 `createWorkerSession({ runtime, world })` uses a dedicated browser Worker for each
 run. Node callers supply `workerFactory: nodeWorkerFactory()` from the
-`moo-in-javascript/node-worker` export. The runtime on the calling thread validates
+`@sindomecorp/moo-in-javascript/node-worker` export. The runtime on the calling thread validates
 snapshots and recompiles source before accepting a worker's final world.
 
 ```js
-import { createRuntime, createWorkerSession, moo } from 'moo-in-javascript';
-import { createTeachingWorld } from 'moo-in-javascript/fixtures';
+import { createRuntime, createWorkerSession, moo } from '@sindomecorp/moo-in-javascript/browser';
+import { createTeachingWorld } from '@sindomecorp/moo-in-javascript/browser/fixtures';
 
 const runtime = await createRuntime({ profile: 'toaststunt' });
 const world = createTeachingWorld({ profile: 'toaststunt' });
@@ -71,7 +71,7 @@ prior world changes committed.
 
 The default worker exposes only the interpreter's built-ins. Custom workers can
 install `createWorkerHandler(send, hostVerbs)` from
-`moo-in-javascript/worker-handler`, with stable host registration IDs. Register
+`@sindomecorp/moo-in-javascript/worker-handler`, with stable host registration IDs. Register
 those IDs on the validating runtime as well. Functions stay in their respective
 realms and are never deserialized. Custom external side effects cannot be rolled
 back by Stop; only managed world state participates in the transaction.

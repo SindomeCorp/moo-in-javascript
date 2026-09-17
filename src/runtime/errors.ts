@@ -2,6 +2,7 @@ import type { SourceSpan } from '../ast/source.js';
 import { moo, type ErrorCode, type MooValue } from '../values/index.js';
 
 export const errorMessages: Record<ErrorCode, string> = {
+  E_FILE: 'File error', E_EXEC: 'Exec error', E_INTRPT: 'Interrupted',
   E_NONE: 'No error', E_TYPE: 'Type mismatch', E_DIV: 'Division by zero', E_PERM: 'Permission denied',
   E_PROPNF: 'Property not found', E_VERBNF: 'Verb not found', E_VARNF: 'Variable not found',
   E_INVIND: 'Invalid indirection', E_RECMOVE: 'Recursive move', E_MAXREC: 'Too many verb calls',
@@ -23,3 +24,7 @@ export class LimitError extends Error {
   constructor(readonly resource: string) { super(`Execution ${resource} limit exceeded`); }
 }
 export function fail(code: ErrorCode, message?: string): never { throw new MooError(code, message); }
+
+export class UnsupportedSourceError extends Error {
+  constructor(readonly diagnostics: readonly import('../ast/source.js').Diagnostic[]) { super(diagnostics.map(d=>d.message).join('; ')); }
+}

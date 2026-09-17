@@ -1,13 +1,16 @@
 # Development
 
 Supported target: Node 22 or newer and modern browsers with ES2022, WebAssembly,
-and module workers. CI uses Node 22 and Chromium via pinned Playwright 1.56.1.
-Local verification uses Node 24.16.0 and existing Chromium 153.0.8010.12.
-Other browsers and the CI-pinned browser build await validation. Set
-`MOO_BROWSER_EXECUTABLE` to use an already installed Chromium executable for
-browser and packed-consumer tests. Ubuntu 26.04 requires a Playwright platform
-override to download the older pinned browser; local checks used the installed
-browser instead.
+and module workers. CI runs the full gates on Node 22 with Chromium from the
+pinned Playwright 1.63.0 dependency (Chromium 153), plus the Node suite on Node 24.
+Other browsers are
+not currently validated. Set `MOO_BROWSER_EXECUTABLE` to an absolute browser
+executable path to use an existing compatible Chromium installation for browser
+and packed-consumer tests. On Linux, Playwright's `--with-deps` option also
+installs system libraries when needed.
+
+Start with [Contributing](../CONTRIBUTING.md) for a fresh clone. Maintainers should
+also read [Releasing](releasing.md).
 
 ```sh
 git submodule update --init --recursive
@@ -57,9 +60,9 @@ any difference before changing the shipped artifact.
 
 ## Browser imports
 
-`moo-in-javascript/browser` is bundled ESM for static hosting. Keep its directory
+`@sindomecorp/moo-in-javascript/browser` is bundled ESM for static hosting. Keep its directory
 structure with `assets/`, or supply `grammarWasm` and `runtimeWasm` URLs explicitly.
-`moo-in-javascript/worker` provides the dedicated browser worker entry. Use
+`@sindomecorp/moo-in-javascript/worker` provides the dedicated browser worker entry. Use
 `createWorkerSession` for execution and Stop; see [workers](workers.md). The
 parser-only `{type:'parse', id, source, options:{profile}}` protocol remains
 available and returns `parsed` or `host-error` with the same ID.
@@ -78,7 +81,7 @@ Grammar bytes or URLs can differ per parser. Dispose each parser after use.
   Save/Load. Results and diagnostics are rendered as text.
 
 Examples are included in the tarball. After installation, Node can run
-`node node_modules/moo-in-javascript/examples/node.mjs`. A static server can serve
+`node node_modules/@sindomecorp/moo-in-javascript/examples/node.mjs`. A static server can serve
 the installed package directory, keeping examples, dist and assets together.
 For application imports use the public package exports documented in workers.md.
 
@@ -92,3 +95,17 @@ while changes are still uncommitted; final Git checkout verification is separate
 local submodule mirrors at the committed gitlink revisions, runs fresh npm ci,
 and executes unit, browser and packed-consumer gates. It removes the checkout
 afterward. Set MOO_BROWSER_EXECUTABLE when using an existing browser install.
+
+## Testing an existing package artifact
+
+`npm run test:package` builds, packs, tests, and removes its own tarball. To test
+an already packed artifact without rebuilding or deleting it, run:
+
+```sh
+node scripts/test-package.mjs ./sindomecorp-moo-in-javascript-0.2.3.tgz
+```
+
+This validates package identity and required files, then installs the exact
+artifact into clean Node, TypeScript, and browser consumers. The release workflow
+publishes this same tested artifact. The expected name and version come from the
+checkout's package manifest.

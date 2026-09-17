@@ -2,7 +2,7 @@ import { HostError, assertProfile, type Profile } from '../parser/index.js';
 
 export const errorCodes = ['E_NONE', 'E_TYPE', 'E_DIV', 'E_PERM', 'E_PROPNF', 'E_VERBNF',
   'E_VARNF', 'E_INVIND', 'E_RECMOVE', 'E_MAXREC', 'E_RANGE', 'E_ARGS', 'E_NACC',
-  'E_INVARG', 'E_QUOTA', 'E_FLOAT'] as const;
+  'E_INVARG', 'E_QUOTA', 'E_FLOAT', 'E_FILE', 'E_EXEC', 'E_INTRPT'] as const;
 export type ErrorCode = typeof errorCodes[number];
 export type MooValue =
   | Readonly<{ type: 'int'; value: bigint }>
@@ -125,7 +125,9 @@ export function encodeValue(value: MooValue, options: CodecOptions): EncodedValu
       case 'int': case 'object': budget.number(value.value); return { type: value.type, value: String(value.value) };
       case 'float': return { type: 'float', value: Object.is(value.value, -0) ? '-0' : value.value };
       case 'string': budget.string(value.value); return { type: 'string', value: value.value };
-      case 'error': return { type: 'error', value: value.value };
+      case 'error':
+        if(options.profile==='lambdamoo' && errorCodes.indexOf(value.value)>15) throw new HostError('Error code requires ToastStunt profile');
+        return { type: 'error', value: value.value };
       case 'list': return { type: 'list', value: value.value.map(entry => encode(entry, depth + 1)) };
       case 'map':
         if (options.profile !== 'toaststunt') throw new HostError('Maps require ToastStunt profile');
@@ -156,7 +158,9 @@ export function decodeValue(input: unknown, options: CodecOptions): MooValue {
       case 'string':
         if (typeof value !== 'string') throw new HostError('Invalid string encoding');
         budget.string(value); return moo.string(value);
-      case 'error': return moo.error(value as ErrorCode);
+      case 'error':
+        if(options.profile==='lambdamoo' && errorCodes.indexOf(value as ErrorCode)>15) throw new HostError('Error code requires ToastStunt profile');
+        return moo.error(value as ErrorCode);
       case 'list':
         if (!Array.isArray(value)) throw new HostError('Invalid list encoding');
         return moo.list(value.map(entry => decode(entry, depth + 1)));

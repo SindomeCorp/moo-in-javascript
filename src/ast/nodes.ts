@@ -33,7 +33,7 @@ export type Statement = Located & (
   | { kind: 'return'; expression: Expr | null }
   | { kind: 'if'; branches: readonly { condition: Expr; body: readonly Statement[] }[]; otherwise: readonly Statement[] }
   | { kind: 'while'; condition: Expr; body: readonly Statement[] }
-  | { kind: 'for'; variable: string; collection: Expr | { kind: 'range'; start: Expr; end: Expr }; body: readonly Statement[] }
+  | { kind: 'for'; variable: string; key?: string; collection: Expr | { kind: 'range'; start: Expr; end: Expr }; body: readonly Statement[] }
   | { kind: 'break' | 'continue'; label: string | null }
   | { kind: 'try'; body: readonly Statement[]; handlers: readonly { variable: string | null; codes: CatchCodes; body: readonly Statement[] }[]; finally: readonly Statement[] | null }
 );

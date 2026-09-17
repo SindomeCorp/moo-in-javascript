@@ -1,9 +1,12 @@
+import { finishSync, finishAsync, type Evaluation } from './suspension.js';
+import { initializeSqlite } from '../host/sqlite.js';
+import { listBuiltins, getBuiltinInfo, type BuiltinInfo } from '../builtins/catalog.js';
 import { createParser, HostError, type MooParser, type ParserOptions, type Profile } from '../parser/index.js';
 import { lower } from '../parser/compile.js';
 import type { Diagnostic, SourceSpan } from '../ast/source.js';
 import type { Statement } from '../ast/nodes.js';
 import { Budget, type Limits, type Statistics } from './budget.js';
-import { MooError, LimitError, type CallFrame } from './errors.js';
+import { MooError, LimitError, UnsupportedSourceError, type CallFrame } from './errors.js';
 import { moo, encodeValue, type MooValue, type ErrorCode } from '../values/index.js';
 import { World, createWorld, type WorldChange } from '../world/index.js';
 import { Execution, type OutputEvent } from './execution.js';
@@ -27,6 +30,7 @@ export type ExecutionResult = ResultBase & (
 );
 
 export async function createRuntime(options: RuntimeOptions): Promise<Runtime> {
+  if(options?.profile==='toaststunt')await initializeSqlite();
   const parser = await createParser(options);
   try { return new Runtime(parser, options.hostVerbs); }
   catch (error) { parser.dispose(); throw error; }
@@ -47,14 +51,33 @@ export class Runtime {
     }
   }
   private check(): void { if (this.#disposed) throw new HostError('Runtime has been disposed'); }
+  listBuiltins(): readonly BuiltinInfo[] { this.check(); return listBuiltins({ profile: this.profile }); }
+  getBuiltinInfo(name: string): BuiltinInfo | undefined { this.check(); return getBuiltinInfo(name, { profile: this.profile }); }
   hasHostVerb(id: string): boolean { this.check(); return this.#hostVerbs.has(id); }
   saveWorld(world: World, limits?: SnapshotLimits): string {
     this.check();
     if (world.profile !== this.profile) throw new HostError('World and runtime profiles must match');
     return saveWorld(world, limits);
   }
+  #snapshotCompilations = new Map<string, Compilation>();
+  #snapshotSourceUnits = 0;
   loadWorld(input: unknown, options: LoadWorldOptions = {}): World {
-    this.check(); return decodeWorld(input, this, options);
+    this.check();
+    // Snapshot validation repeats for worker commits and workspace reloads. Keep a
+    // bounded, runtime-local cache keyed by the exact source, never by verb ID.
+    return decodeWorld(input, {profile:this.profile,hasHostVerb:id=>this.hasHostVerb(id),compile:source=>{
+      const cached=this.#snapshotCompilations.get(source);
+      if(cached)return cached;
+      const result=this.compile(source);
+      if(source.length<=4_000_000){
+        while(this.#snapshotCompilations.size>=4096 || this.#snapshotSourceUnits+source.length>4_000_000){
+          const oldest=this.#snapshotCompilations.keys().next().value!;
+          this.#snapshotCompilations.delete(oldest);this.#snapshotSourceUnits-=oldest.length;
+        }
+        this.#snapshotCompilations.set(source,result);this.#snapshotSourceUnits+=source.length;
+      }
+      return result;
+    }}, options);
   }
   compile(source: string): Compilation {
     this.check();
@@ -67,10 +90,17 @@ export class Runtime {
     return { ok: true, program };
   }
   execute(program: Program, options: ExecuteOptions = {}): ExecutionResult {
+    return finishSync(this.executeTask(program, options));
+  }
+  executeAsync(program: Program, options: ExecuteOptions = {}): Promise<ExecutionResult> {
+    return finishAsync(this.executeTask(program, options));
+  }
+  private *executeTask(program: Program, options: ExecuteOptions): Evaluation<ExecutionResult> {
     this.check();
     const body = this.#programs.get(program);
     if (!body || program.profile !== this.profile) throw new HostError('Program belongs to another runtime or profile');
-    const budget = new Budget(options.limits);
+    const defaults=options.world?.environment?.serverOptions;
+    const budget = new Budget({...(defaults?{steps:defaults.fg_ticks,seconds:defaults.fg_seconds}:{}),...options.limits});
     const world = options.world ?? createWorld({ profile: this.profile });
     if (!(world instanceof World) || world.profile !== this.profile) throw new HostError('World and runtime profiles must match');
     if (options.onOutput !== undefined && typeof options.onOutput !== 'function') throw new HostError('onOutput must be a function');
@@ -88,14 +118,15 @@ export class Runtime {
     encodeValue(args, { profile: this.profile });
     const release = world.acquireExecution();
     try {
-    const before = world.objects(), beforeNextId = world.nextId;
+    const before = world.objects(), beforeNextId = world.nextId, beforeEnvironment=world.environment;
+    const taskId = ++this.#runCounter;
     const execution = new Execution(world, budget, source => {
-      const compiled = this.compile(source);
+      const compiled = this.#snapshotCompilations.get(source) ?? this.compile(source);
       return compiled.ok ? { ok: true, body: this.#programs.get(compiled.program)! } : compiled;
-    }, options.runId ?? `run-${++this.#runCounter}`, options.onOutput, this.#hostVerbs);
+    }, options.runId ?? `run-${taskId}`, options.onOutput, this.#hostVerbs, taskId);
     const base: ResultBase = { output: execution.output, changes: [], commit: 'committed', statistics: budget.stats };
     try {
-      const value = execution.run(body, frame, context.args ?? []);
+      const value = yield* execution.run(body, frame, context.args ?? []);
       // Reserve a bounded, lossless result for both direct and worker callers.
       // Local values can share subtrees whose expanded encoding is much larger.
       try { encodeValue(value, { profile: this.profile }); }
@@ -103,15 +134,19 @@ export class Runtime {
         if (!(error instanceof HostError)) throw error;
         throw new LimitError('resultValue');
       }
-      return { ...base, changes: world.changes(before, beforeNextId), status: 'completed', value, diagnostics: [] };
+      return { ...base, changes: world.changes(before, beforeNextId, beforeEnvironment), status: 'completed', value, diagnostics: [] };
     }
     catch (error) {
+      if (error instanceof UnsupportedSourceError) {
+        release(); world.restore(before, beforeNextId, beforeEnvironment);
+        return {...base, status:'unsupported-feature', commit:'discarded', diagnostics:error.diagnostics};
+      }
       if (!(error instanceof MooError) && !(error instanceof LimitError)) throw error;
       const status = error instanceof MooError ? 'runtime-error' : 'limit-exceeded';
       const diagnostic: RuntimeDiagnostic = { category: status, message: error.message, stack: error.frames ?? [] };
       if (error instanceof MooError) diagnostic.code = error.code;
       if (error.span) diagnostic.span = error.span;
-      return { ...base, changes: world.changes(before, beforeNextId), status, diagnostics: [diagnostic] };
+      return { ...base, changes: world.changes(before, beforeNextId, beforeEnvironment), status, diagnostics: [diagnostic] };
     }
     } finally { release(); }
   }
@@ -122,5 +157,10 @@ export class Runtime {
       diagnostics: compiled.diagnostics, output: [], changes: [], commit: 'discarded',
       statistics: { steps: 0, allocations: 0, peakEvaluationDepth: 0, peakCallDepth: 0, outputCharacters: 0, outputEvents: 0 } };
   }
-  dispose(): void { this.parser.dispose(); this.#disposed = true; this.#programs = new WeakMap(); }
+  async runAsync(source: string, options: ExecuteOptions = {}): Promise<ExecutionResult> {
+    const compiled = this.compile(source);
+    if (compiled.ok) return this.executeAsync(compiled.program, options);
+    return this.run(source, options);
+  }
+  dispose(): void { this.parser.dispose(); this.#snapshotCompilations.clear(); this.#snapshotSourceUnits=0; this.#disposed = true; this.#programs = new WeakMap(); }
 }

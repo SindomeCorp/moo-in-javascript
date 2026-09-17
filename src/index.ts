@@ -19,3 +19,8 @@ export { createSession, WorldSession } from './runtime/session.js';
 export type { SessionRunOptions } from './runtime/session.js';
 export { createWorkerSession, WorkerSession, WorkerHostError, browserWorkerFactory } from './worker/client.js';
 export type { WorkerTransport, WorkerFactory, WorkerSessionOptions, WorkerRunOptions, WorkerRun, CancelledResult } from './worker/client.js';
+
+export { listBuiltins, getBuiltinInfo } from './builtins/catalog.js';
+export type { BuiltinInfo, BuiltinParameter, BuiltinValueType, BuiltinCatalogOptions } from './builtins/catalog.js';
+
+export { createHostEnvironment, type HostEnvironment, type VirtualConnection, type VirtualFile, type VirtualHandle, type VirtualDatabase, type VirtualListener, type ServiceFixture } from './host/environment.js';

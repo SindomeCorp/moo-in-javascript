@@ -1,10 +1,10 @@
 # Compatibility and implementation status
 
-This package implements the documented v0.1 subset. `createParser()` and `createRuntime()` are
+This package implements the documented educational subset. `createParser()` and `createRuntime()` are
 available. Expression/control-flow execution, worlds, source verbs and output
 work. Snapshots, host registrations, Reset, browser/Node execution workers
 and Stop are implemented. Parsing a
-construct does **not** claim execution support. The full scope remains in PLAN.md.
+construct does **not** claim execution support. Historical scope and milestones remain in [PLAN.md](https://github.com/SindomeCorp/moo-in-javascript/blob/main/PLAN.md).
 
 | Feature | LambdaMOO parser | ToastStunt parser | Execution |
 | --- | --- | --- | --- |
@@ -20,8 +20,12 @@ construct does **not** claim execution support. The full scope remains in PLAN.m
 | Execution workers and Stop | Not a parser feature | Not a parser feature | Implemented |
 
 Profiles are mandatory. No implicit profile or automatic profile conversion is
-allowed. Permissions, connections, command dispatch, scheduling, waifs, anonymous
-objects, database dumps, movement, and changing parents remain outside v0.1.
+allowed. General permission enforcement, command dispatch, cooperative scheduling,
+WAIFs and anonymous objects remain unsupported. Movement and single-parent
+reparenting are implemented. Connections and database checkpoints use the
+[persistent educational host](host-simulation.md). The
+[builtin inventory](builtin-roadmap.md) distinguishes real implementations,
+limited subsets, simulations and deferred features.
 
 ## References
 
@@ -49,3 +53,31 @@ values, operators, flow, exceptions, maps, aliases and limits. Their reviewed
 expectations cite the manual and the pinned source's `numbers.cc`, `utils.cc`,
 `map.cc`, `collection.cc`, `list.cc`, and `unparse.cc`. See
 [semantics](semantics.md) for explicit differences and boundary evidence.
+
+## Deliberate exclusions and accounting stubs
+
+Multiple inheritance (`chparents` and multi-parent creation), native multithreading
+(`threads`, `thread_pool`, `set_thread_mode`), and native bytecode facilities
+(including `disassemble`) are out of scope, not deferred compatibility targets.
+Single-parent inheritance remains the supported object model. A future cooperative
+scheduler would not introduce multithreading.
+
+`value_bytes` and `object_bytes` are documented fixed-zero stubs in both profiles,
+not memory measurements. See [builtin introspection](builtin-introspection.md#memory-accounting-stubs)
+for argument validation and [the roadmap](builtin-roadmap.md) for the remaining inventory.
+
+Bounded `suspend(seconds)` is available through async executions and workers.
+It caps waits at five seconds and refreshes this evaluator's configured tick/time
+slice, not native foreground/background server quotas. There is no indefinite
+suspension or `resume()`; output/allocation limits and worker watchdogs remain in
+force. See the asynchronous suspension section in `api.md`.
+
+## Browser validation
+
+The browser runtime and workers are validated with Chromium 153 through pinned
+Playwright 1.63.0. Other browser engines and older Chromium versions are not
+currently validated as a complete supported target. In Chromium 141, basic
+runtime and worker tests pass, but the bundled SQLite engine can return
+`Maximum call stack size exceeded` inside a worker. Use the validated browser
+version when depending on SQLite persistence; ES2022 and WebAssembly support
+alone do not guarantee every builtin works in an older browser.

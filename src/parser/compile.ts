@@ -39,9 +39,11 @@ export function lower(syntax: SyntaxNode, profile: Profile): { ok: true; body: r
           return { kind: 'literal', value: moo.string(value), span };
         }
         case 'error_constant':
+          if(profile==='lambdamoo' && errorCodes.indexOf(n.text as ErrorCode)>15) reject(n, `${n.text} requires ToastStunt`);
           if (!errorCodes.includes(n.text as ErrorCode)) reject(n, `Unknown error constant ${n.text}`, 'syntax-error');
           return { kind: 'literal', value: moo.error(n.text as ErrorCode), span };
         case 'type_constant': {
+          if (profile === 'toaststunt' && ['WAIF', 'ANON'].includes(n.text)) return { kind: 'literal', value: moo.int(n.text === 'WAIF' ? 13 : 12), span };
           const tags = { INT: 'int', NUM: 'int', OBJ: 'object', STR: 'string', ERR: 'error', LIST: 'list', FLOAT: 'float', MAP: 'map' } as const;
           const tag = tags[n.text as keyof typeof tags];
           if (!tag || (tag === 'map' && profile === 'lambdamoo')) reject(n, `${n.text} type is unsupported in ${profile}`);
@@ -126,6 +128,12 @@ export function lower(syntax: SyntaxNode, profile: Profile): { ok: true; body: r
     return result;
   }
   function argument(n: SyntaxNode): Argument {
+    // Native @condition ? list | list splices the entire conditional argument.
+    if (n.kind === 'conditional_expression' && field(n, 'condition')?.kind === 'splice_expression') {
+      const condition = field(n, 'condition');
+      const unwrapped = {...children(condition)[0]!, field: 'condition'};
+      return {splice:true, expression:expression({...n, children:n.children.map(c => c === condition ? unwrapped : c)})};
+    }
     return n.kind === 'splice_expression' ? { splice: true, expression: expression(children(n)[0]!) } : { splice: false, expression: expression(n) };
   }
   function codes(nodes: SyntaxNode[]): CatchCodes {
@@ -162,7 +170,8 @@ export function lower(syntax: SyntaxNode, profile: Profile): { ok: true; body: r
           finally { loops.pop(); }
         }
         case 'for_statement': {
-          if (field(n, 'key')) reject(n, 'Two-variable map iteration is not implemented yet');
+          const key = field(n, 'key');
+          if (key && profile !== 'toaststunt') reject(n, 'Two-variable iteration requires ToastStunt');
           const name = field(n, 'value'), source = field(n, 'collection');
           const variable = fold(name.text);
           let collection: Expr | { kind: 'range'; start: Expr; end: Expr };
@@ -171,7 +180,7 @@ export function lower(syntax: SyntaxNode, profile: Profile): { ok: true; body: r
             collection = { kind: 'range', start: expression(field(source, 'start')), end: expression(field(source, 'end')) };
           } else collection = expression(source);
           loops.push(variable);
-          try { return { kind: 'for', variable, collection, body: named.filter(c => c !== name && c !== source).map(statement), span }; }
+          try { return { kind: 'for', variable, ...(key ? {key:fold(key.text)} : {}), collection, body: named.filter(c => c !== name && c !== source && c !== key).map(statement), span }; }
           finally { loops.pop(); }
         }
         case 'break_statement': case 'continue_statement': {

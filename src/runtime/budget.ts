@@ -1,14 +1,21 @@
 import { HostError } from '../parser/index.js';
 import { LimitError } from './errors.js';
 
-export interface Limits { steps?: number; allocations?: number; evaluationDepth?: number; callDepth?: number; outputCharacters?: number; outputEvents?: number }
+export interface Limits { seconds?: number; steps?: number; allocations?: number; evaluationDepth?: number; callDepth?: number; outputCharacters?: number; outputEvents?: number }
 export interface Statistics { steps: number; allocations: number; peakEvaluationDepth: number; peakCallDepth: number; outputCharacters: number; outputEvents: number }
 export class Budget {
   readonly stats: Statistics = { steps: 0, allocations: 0, peakEvaluationDepth: 0, peakCallDepth: 0, outputCharacters: 0, outputEvents: 0 };
   readonly limits: Required<Limits>;
   #depth = 0;
+  readonly started = performance.now();
+  #sliceStarted = this.started;
+  #sliceSteps = 0;
+  #suspensions = 0;
+  remainingSteps(): number { return this.limits.steps - (this.stats.steps - this.#sliceSteps); }
+  suspend(): void { if (++this.#suspensions > 100) throw new LimitError('suspensions'); }
+  replenish(): void { this.#sliceStarted = performance.now(); this.#sliceSteps = this.stats.steps; }
   constructor(limits: Limits = {}) {
-    this.limits = { steps: limits.steps ?? 100_000, allocations: limits.allocations ?? 1_000_000,
+    this.limits = { seconds: limits.seconds ?? 30, steps: limits.steps ?? 100_000, allocations: limits.allocations ?? 1_000_000,
       evaluationDepth: limits.evaluationDepth ?? 200, callDepth: limits.callDepth ?? 50, outputCharacters: limits.outputCharacters ?? 20_000, outputEvents: limits.outputEvents ?? 1000 };
     for (const value of Object.values(this.limits)) {
       if (!Number.isSafeInteger(value) || value < 0) throw new HostError('Limits must be nonnegative safe integers');
@@ -16,9 +23,11 @@ export class Budget {
     if (this.limits.evaluationDepth > 256) throw new HostError('evaluationDepth cannot exceed 256');
     if (this.limits.callDepth > 100) throw new HostError('callDepth cannot exceed 100');
   }
+  remainingSeconds(): number { return Math.max(0,this.limits.seconds-(performance.now()-this.#sliceStarted)/1000); }
   step(count = 1): void {
+    if (this.remainingSeconds() <= 0) throw new LimitError('seconds');
     if (!Number.isSafeInteger(count) || count < 0) throw new HostError('Step charges must be nonnegative safe integers');
-    if (count > this.limits.steps - this.stats.steps) throw new LimitError('steps');
+    if (count > this.remainingSteps()) throw new LimitError('steps');
     this.stats.steps += count;
   }
   allocate(count: number): void {

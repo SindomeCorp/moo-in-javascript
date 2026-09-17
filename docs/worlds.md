@@ -1,8 +1,10 @@
 # Worlds, calls and output
 
 `createWorld({profile, limits?})` creates an empty world. The optional fixture
-entry exports `createTeachingWorld({profile})`, with system #0, room parent #1,
-player #7 and room #42. The room declares lamp_on and locked. The player's tell
+entry exports `createTeachingWorld({profile})`, with root class #1 and its children: system #0, generic room #3,
+generic thing #5, and generic player #6. Learner #7 inherits from #6;
+Training Room #42 inherits from #3. System aliases `$room`, `$thing`, and
+`$player` reference the generic classes without being inherited by their instances. The room declares lamp_on and locked. Generic Player's inherited tell
 and notify names share a MOO-source verb using notify and tostr; the evaluator
 does not special-case teaching IDs or names.
 
@@ -19,12 +21,13 @@ Inherited property slots carry independent owner/perms metadata and either an
 override or a clear marker; a clear read follows the parent chain. New inherited
 slots start clear. The c flag assigns a new inherited slot's owner to the child
 owner. Defining, renaming or deleting a property updates all descendants.
-Properties cannot be implicitly created by assignment. Built-in location and
-contents stay #-1 and empty because movement is deferred; writes are rejected.
+Properties cannot be implicitly created by assignment. Built-in location and contents reflect containment; use move() to change them.
+Direct writes are rejected.
 Other built-in properties are stored with type checks. Permission metadata is
 accepted and returned without enforcing permissions, including verb x flags.
 
-Object IDs increase monotonically and are never reused. Recycling reparents
+Ordinary creation allocates increasing IDs. Explicit renumber(), reset_max_object()
+and ToastStunt recreate() operations can reuse IDs. Recycling reparents
 children to the removed object's parent, removes properties originating on the
 removed object, and leaves ordinary object references dangling. Root/child
 traversal and total object/property/verb/value/string storage are bounded. Each
@@ -34,11 +37,11 @@ The supported MOO operations include create, recycle, valid, max_object, parent,
 children, properties, property_info, set_property_info, add_property,
 delete_property, is_clear_property and clear_property.
 
-Lifecycle initialize/recycle hooks are currently rejected explicitly by create
-or recycle before the requested lifecycle mutation. They are not silently
-skipped. Ownership quotas and server-level object hooks are not implemented;
+create() and recreate() call initialize when present. recycle hooks remain
+explicitly rejected before recycling. move() dispatches accept/exitfunc/enterfunc. Ownership quotas and server-level object hooks are not implemented;
 the educational runtime uses its explicit world budgets. No permission checks,
-movement, reparenting API, anonymous objects or waifs are provided.
+anonymous objects or waifs are provided. chparent() supports single-parent
+reparenting with inherited-property conflict validation.
 
 ## Verbs and programming
 

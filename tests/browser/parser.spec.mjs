@@ -136,3 +136,77 @@ test('static playground runs, safely renders output, stops and restores snapshot
   await expect(page.locator('#status')).toHaveText('completed');
   await expect(page.locator('#result')).toContainText('"type": "map"');
 });
+
+test('browser catalog works without WASM and powers worker function_info', async ({ page }) => {
+  let wasmRequests = 0;
+  await page.route('**/*.wasm', route => { wasmRequests++; return route.abort(); });
+  await page.goto('/tests/browser/index.html');
+  const catalog = await page.evaluate(async () => {
+    const { listBuiltins, getBuiltinInfo } = await import('/dist/browser/index.js');
+    return { count: listBuiltins({profile:'toaststunt'}).length, lambdaMap: getBuiltinInfo('mapkeys',{profile:'lambdamoo'}) ?? null,
+      notify: getBuiltinInfo('NOTIFY',{profile:'toaststunt'}) };
+  });
+  expect(wasmRequests).toBe(0); expect(catalog.count).toBe(218); expect(catalog.lambdaMap).toBeNull();
+  expect(catalog.notify.returns.types).toEqual(['int']);
+  await page.unroute('**/*.wasm');
+  const results = await page.evaluate(async () => {
+    const { createRuntime, createWorkerSession, encodeValue } = await import('/dist/browser/index.js');
+    const { createTeachingWorld } = await import('/dist/browser/fixtures.js');
+    const results = [];
+    for (const profile of ['lambdamoo','toaststunt']) {
+      const runtime = await createRuntime({profile});
+      try {
+        const session = createWorkerSession({ runtime, world: createTeachingWorld({profile}) });
+        const result = await session.run('return function_info("notify");').result;
+        results.push({ status: result.status, value: encodeValue(result.value,{profile}), count: runtime.listBuiltins().length });
+      } finally { runtime.dispose(); }
+    }
+    return results;
+  });
+  expect(results.map(r => r.count)).toEqual([119,218]);
+  expect(results.every(r => r.status === 'completed')).toBe(true);
+  expect(results[0].value).toEqual(results[1].value);
+  expect(results[0].value.value[0]).toEqual({type:'string',value:'notify'});
+});
+
+test('browser worker preserves explicit invocation context and nested args', async ({page}) => {
+  await page.goto('/tests/browser/index.html');
+  const results=await page.evaluate(async()=>{
+    const {createRuntime,createWorld,createWorkerSession,moo,encodeValue}=await import('/dist/browser/index.js');
+    const results=[];
+    for(const profile of ['lambdamoo','toaststunt']) {
+      const runtime=await createRuntime({profile}),world=createWorld({profile});
+      world.addObject({id:0});world.addObject({id:1,parent:0});
+      try {
+        const context={this:moo.object(1),player:moo.object(0),caller:moo.object(1),verb:'browser-context',args:[moo.list([moo.string('nested'),moo.float(-0),moo.int(7)])]};
+        const source='notify(player,verb); return {this,player,caller,verb,args};';
+        const direct=runtime.run(source,{world,context});
+        const worker=await createWorkerSession({runtime,world}).run(source,{context}).result;
+        results.push({direct:encodeValue(direct.value,{profile}),worker:encodeValue(worker.value,{profile}),output:worker.output.map(e=>[String(e.recipient.value),e.text]),changes:worker.changes});
+      }finally{runtime.dispose();}
+    }
+    return results;
+  });
+  for(const result of results) {
+    expect(result.worker).toEqual(result.direct);
+    expect(result.worker).toEqual({type:'list',value:[{type:'object',value:'1'},{type:'object',value:'0'},{type:'object',value:'1'},{type:'string',value:'browser-context'},{type:'list',value:[{type:'list',value:[{type:'string',value:'nested'},{type:'float',value:'-0'},{type:'int',value:'7'}]}]}]});
+    expect(result.output).toEqual([['0','browser-context']]);expect(result.changes).toEqual([]);
+  }
+});
+
+test('expanded host and SQLite persist across browser worker executions',async({page})=>{
+ await page.goto('/tests/browser/index.html');
+ const result=await page.evaluate(async()=>{
+  const {createRuntime,createWorld,createWorkerSession,createHostEnvironment,moo,encodeValue}=await import('/dist/browser/index.js');
+  const profile='toaststunt',runtime=await createRuntime({profile}),world=createWorld({profile});world.addObject({id:0});
+  world.setEnvironment(createHostEnvironment({fixtures:[{builtin:'getenv',args:[moo.string('EXAMPLE')],result:moo.string('fixture')}]}));
+  try{
+   const session=createWorkerSession({runtime,world});
+   const first=await session.run('h=sqlite_open("demo"); sqlite_query(h,"CREATE TABLE items(value)"); sqlite_execute(h,"INSERT INTO items VALUES (?)",{42}); f=file_open("demo","w+tn"); file_writeline(f,"saved"); file_close(f); return getenv("EXAMPLE");').result;
+   const loaded=runtime.loadWorld(runtime.saveWorld(world));
+   const second=await createWorkerSession({runtime,world:loaded}).run('return sqlite_query(1,"SELECT value FROM items");').result;
+   return {first:first.status,second:second.status,value:second.value&&encodeValue(second.value,{profile}),files:loaded.environment.files.map(f=>f.path)};
+  }finally{runtime.dispose();}
+ });
+ expect(result.first).toBe('completed');expect(result.second).toBe('completed');expect(result.value).toEqual({type:'list',value:[{type:'list',value:[{type:'int',value:'42'}]}]});expect(result.files).toContain('/demo');
+});

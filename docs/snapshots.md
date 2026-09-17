@@ -5,8 +5,8 @@ They exclude parser trees, compiled programs, JavaScript callbacks, editor
 history and invocation context.
 
 ```js
-import { createRuntime, createSession, loadWorld, moo } from 'moo-in-javascript';
-import { createTeachingWorld } from 'moo-in-javascript/fixtures';
+import { createRuntime, createSession, loadWorld, moo } from '@sindomecorp/moo-in-javascript';
+import { createTeachingWorld } from '@sindomecorp/moo-in-javascript/fixtures';
 const runtime = await createRuntime({ profile: 'toaststunt' });
 try {
   const world = createTeachingWorld({ profile: 'toaststunt' });

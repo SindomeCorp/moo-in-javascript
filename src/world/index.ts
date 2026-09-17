@@ -1,3 +1,4 @@
+import { freezeEnvironment, type HostEnvironment } from '../host/environment.js';
 import { assertProfile, HostError, type Profile } from '../parser/index.js';
 import { moo, encodeValue, type MooValue } from '../values/index.js';
 import { fold, truth } from '../values/operations.js';
@@ -9,11 +10,13 @@ export interface VerbData { readonly names: string; readonly owner: bigint; read
 export interface ObjectData {
   readonly id: bigint; readonly parent: bigint; readonly name: string; readonly owner: bigint;
   readonly flags: Readonly<{ programmer: number; wizard: number; r: number; w: number; f: number }>;
+  readonly player?: boolean; readonly location?: bigint; readonly contents?: readonly bigint[];
   readonly properties: readonly PropertyData[]; readonly verbs: readonly VerbData[];
 }
 export type WorldChange = { kind: 'object-created'; object: bigint; after: ObjectData }
   | { kind: 'object-updated'; object: bigint; before: ObjectData; after: ObjectData }
   | { kind: 'object-recycled'; object: bigint; before: ObjectData }
+  | { kind: 'host-state'; before: HostEnvironment | undefined; after: HostEnvironment | undefined }
   | { kind: 'allocation-state'; before: bigint; after: bigint };
 export interface WorldLimits { objects?: number; properties?: number; verbs?: number; valueNodes?: number; stringUnits?: number; inheritanceDepth?: number }
 const builtinNames = new Set(['name', 'owner', 'location', 'contents', 'programmer', 'wizard', 'r', 'w', 'f']);
@@ -28,7 +31,7 @@ export function verbMatches(names: string, sought: string): boolean {
   });
 }
 function freezeObject(data: ObjectData): ObjectData {
-  return Object.freeze({ ...data, flags: Object.freeze({ ...data.flags }),
+  return Object.freeze({ ...data, ...(data.contents ? { contents: Object.freeze([...data.contents]) } : {}), flags: Object.freeze({ ...data.flags }),
     properties: Object.freeze(data.properties.map(property => Object.freeze({ ...property }))),
     verbs: Object.freeze(data.verbs.map(verb => Object.freeze({ ...verb, args: Object.freeze([...verb.args]) as readonly [string, string, string] }))),
   });
@@ -40,6 +43,11 @@ export class World {
   readonly limits: Required<WorldLimits>;
   #objects = new Map<bigint, ObjectData>();
   #nextId = 0n;
+  #environment: HostEnvironment | undefined;
+  get environment(): HostEnvironment | undefined { return this.#environment; }
+  setEnvironment(environment: HostEnvironment, budget?: Budget): void {
+    const frozen=freezeEnvironment(environment);budget?.allocate(JSON.stringify(frozen).length);this.commit([],[],this.#nextId,budget,frozen);
+  }
   #executing = false;
   #isolated = false;
   constructor(options: { profile: Profile; limits?: WorldLimits }) {
@@ -52,7 +60,7 @@ export class World {
   get nextId(): bigint { return this.#nextId; }
   assertIdle(): void { if (this.#executing) throw new HostError('World save/load/reset must occur between executions'); }
   /** Import managed records after validation; replacement is atomic. */
-  restore(records: readonly ObjectData[], nextId: bigint): void {
+  restore(records: readonly ObjectData[], nextId: bigint, environment?: HostEnvironment): void {
     this.assertIdle();
     const maximum = (1n << (this.profile === 'lambdamoo' ? 31n : 63n)) - 1n;
     if (typeof nextId !== 'bigint' || nextId < 0n || nextId > maximum + 1n) throw new HostError('Invalid nextId allocation state');
@@ -61,6 +69,9 @@ export class World {
     for (const record of records) {
       if (typeof record.id !== 'bigint' || record.id < 0n || record.id >= nextId || ids.has(record.id)) throw new HostError('Invalid or duplicate object ID');
       for (const id of [record.id, record.parent, record.owner]) encodeValue(moo.object(id), { profile: this.profile });
+      if (record.player !== undefined && typeof record.player !== 'boolean') throw new HostError('Invalid player flag');
+      if (record.location !== undefined) encodeValue(moo.object(record.location), { profile: this.profile });
+      if (record.contents !== undefined && (!Array.isArray(record.contents) || record.contents.some(id => typeof id !== 'bigint'))) throw new HostError('Invalid contents');
       if (typeof record.name !== 'string') throw new HostError('Invalid object name');
       if (Object.keys(record.flags).sort().join(',') !== 'f,programmer,r,w,wizard' || Object.values(record.flags).some(value => value !== 0 && value !== 1)) throw new HostError('Invalid object flags');
       const names = new Set<string>();
@@ -89,6 +100,16 @@ export class World {
         current = ids.get(current.parent);
         if (!current) throw new HostError('Snapshot has a missing parent');
       }
+      const contained = record.contents ?? [];
+      if (new Set(contained).size !== contained.length || contained.some(id => !ids.has(id) || ids.get(id)!.location !== record.id)) throw new HostError('Invalid contents links');
+      const locations = new Set<bigint>([record.id]);
+      let located = record;
+      while ((located.location ?? -1n) !== -1n) {
+        const container = ids.get(located.location!);
+        if (!container || !(container.contents ?? []).includes(located.id)) throw new HostError('Invalid location link');
+        if (locations.has(container.id)) throw new HostError('Snapshot containment cycle');
+        locations.add(container.id); located = container;
+      }
       const parent = ids.get(record.parent);
       const inherited = new Map(parent?.properties.map(property => [fold(property.name), property]) ?? []);
       for (const property of record.properties) {
@@ -103,14 +124,14 @@ export class World {
       if (inherited.size) throw new HostError('Snapshot is missing inherited property slots');
     }
     const candidate = new World({ profile: this.profile, limits: this.limits });
-    try { candidate.commit([...records], [], nextId); }
+    try { candidate.commit([...records], [], nextId, undefined, environment===undefined?undefined:freezeEnvironment(environment)); }
     catch (cause) { throw new HostError('Snapshot world limits exceeded', { cause }); }
-    this.#objects = candidate.#objects; this.#nextId = candidate.#nextId;
+    this.#objects = candidate.#objects; this.#nextId = candidate.#nextId; this.#environment=candidate.#environment;
   }
   replaceWith(world: World): void {
     this.assertIdle(); world.assertIdle();
     if (this.profile !== world.profile) throw new HostError('World profiles must match when replacing state');
-    this.restore(world.objects(), world.nextId);
+    this.restore(world.objects(), world.nextId, world.environment);
   }
   acquireExecution(): () => void {
     if (this.#executing) throw new HostError('Executions on one world must be serialized');
@@ -126,7 +147,7 @@ export class World {
   objects(): readonly ObjectData[] { return Object.freeze([...this.#objects.values()]); }
   valid(id: bigint): boolean { return this.#objects.has(id); }
   get(id: bigint, indirect = false): ObjectData { return this.#objects.get(id) ?? fail(indirect ? 'E_INVIND' : 'E_INVARG', `Object #${id} does not exist`); }
-  changes(before: readonly ObjectData[], beforeNextId?: bigint): WorldChange[] {
+  changes(before: readonly ObjectData[], beforeNextId?: bigint, beforeEnvironment?: HostEnvironment): WorldChange[] {
     const previous = new Map(before.map(object => [object.id, object]));
     const changes: WorldChange[] = [];
     for (const object of this.#objects.values()) {
@@ -136,6 +157,7 @@ export class World {
     }
     for (const object of previous.values()) changes.push({ kind: 'object-recycled', object: object.id, before: object });
     if (beforeNextId !== undefined && beforeNextId !== this.#nextId) changes.push({ kind: 'allocation-state', before: beforeNextId, after: this.#nextId });
+    if(beforeEnvironment!==this.#environment)changes.push({kind:'host-state',before:beforeEnvironment,after:this.#environment});
     return changes;
   }
   ancestors(id: bigint, budget?: Budget): ObjectData[] {
@@ -153,12 +175,13 @@ export class World {
     this.get(id);
     return [...this.#objects.values()].filter(object => this.ancestors(object.id, budget).some(ancestor => ancestor.id === id));
   }
-  private commit(updates: ObjectData[], removals: bigint[] = [], nextId = this.#nextId, budget?: Budget): void {
+  private commit(updates: ObjectData[], removals: bigint[] = [], nextId = this.#nextId, budget?: Budget, environment = this.#environment): void {
     if (this.#isolated) throw new HostError('World mutations must wait for the isolated execution');
     const objects = new Map(this.#objects);
     for (const id of removals) objects.delete(id);
     for (const update of updates) objects.set(update.id, freezeObject(update));
-    let properties = 0, verbs = 0, nodes = 0, strings = 0;
+    let properties = 0, verbs = 0, nodes = 0, strings = environment?JSON.stringify(environment).length:0;
+    if(strings>this.limits.stringUnits)throw new LimitError('worldSize');
     if (objects.size > this.limits.objects) throw new LimitError('worldObjects');
     for (const object of objects.values()) {
       budget?.step(); properties += object.properties.length; verbs += object.verbs.length; strings += object.name.length;
@@ -179,7 +202,7 @@ export class World {
       if (properties > this.limits.properties || verbs > this.limits.verbs || strings > this.limits.stringUnits) throw new LimitError('worldSize');
     }
     budget?.allocate(updates.reduce((sum, object) => sum + 1 + object.properties.length + object.verbs.length, 0));
-    this.#objects = objects; this.#nextId = nextId;
+    this.#objects = objects; this.#nextId = nextId; this.#environment=environment;
   }
   private validateValue(value: MooValue, budget?: Budget): void {
     try { encodeValue(value, { profile: this.profile }); }
@@ -207,7 +230,63 @@ export class World {
       updates.push({ ...descendant, parent: descendant.parent === id ? object.parent : descendant.parent,
         properties: descendant.properties.filter(property => property.origin !== id) });
     }
-    this.commit(updates, [id], this.#nextId, budget);
+    const merged = new Map(updates.map(o => [o.id,o]));
+    for (const original of this.#objects.values()) {
+      if (original.id === id) continue;
+      let update=merged.get(original.id) ?? original;
+      if (update.location === id) update={...update, location:-1n};
+      if (update.contents?.includes(id)) update={...update, contents:update.contents.filter(child=>child!==id)};
+      if (update !== original) merged.set(update.id,update);
+    }
+    this.commit([...merged.values()], [id], this.#nextId, budget);
+  }
+  recreate(id: bigint, parent: bigint, owner: bigint, budget?: Budget): bigint {
+    if(id<=0n||id>=this.#nextId||this.valid(id))fail('E_INVARG');
+    if(owner===-1n)owner=id;if(owner!==id)this.get(owner);
+    const ancestors=parent===-1n?[]:this.ancestors(parent,budget);if(ancestors.length>=this.limits.inheritanceDepth)throw new LimitError('inheritanceDepth');
+    const properties=ancestors[0]?.properties.map(prop=>({...prop,value:null,owner:prop.perms.includes('c')?owner:prop.owner}))??[];
+    this.commit([{id,parent,owner,name:'',flags:{programmer:0,wizard:0,r:0,w:0,f:0},properties,verbs:[]}],[],this.#nextId,budget);return id;
+  }
+  resetMaxObject(budget?: Budget): void {
+    let next=0n;for(const object of this.#objects.values()){budget?.step();if(object.id>=next)next=object.id+1n;}this.commit([],[],next,budget);
+  }
+  renumber(id: bigint,budget?: Budget): bigint {
+    this.get(id);let target=0n;const ids=[...this.#objects.keys()].sort((a,b)=>a<b?-1:1);budget?.step(ids.length);
+    for(const allocated of ids){if(allocated!==target)break;target++;}if(target>=id)return id;
+    const link=(value:bigint)=>value===id?target:value,owner=(value:bigint)=>value===target?-1n:link(value);
+    const updates=[...this.#objects.values()].map(object=>({...object,id:link(object.id),parent:link(object.parent),owner:owner(object.owner),
+      ...(object.location===undefined?{}:{location:link(object.location)}),...(object.contents?{contents:object.contents.map(link)}:{}),
+      properties:object.properties.map(p=>({...p,origin:link(p.origin),owner:owner(p.owner)})),verbs:object.verbs.map(v=>({...v,owner:owner(v.owner)}))}));
+    this.commit(updates,[id],this.#nextId,budget);return target;
+  }
+  setPlayer(id: bigint, player: boolean, budget?: Budget): void {
+    if (typeof player !== 'boolean') throw new HostError('Player flag must be boolean');
+    this.commit([{...this.get(id),player}],[],this.#nextId,budget);
+  }
+  reparent(id: bigint, parent: bigint, budget?: Budget): void {
+    const object=this.get(id), ancestry=parent===-1n?[]:this.ancestors(parent,budget);
+    if (ancestry.some(o=>o.id===id)) fail('E_RECMOVE');
+    const updates=new Map<bigint,ObjectData>();
+    const visit=(current:ObjectData,newParent:ObjectData|undefined,depth:number):void=>{
+      budget?.step();if(depth>this.limits.inheritanceDepth)throw new LimitError('inheritanceDepth');
+      const own=current.properties.filter(p=>p.origin===current.id),inherited=newParent?.properties??[];
+      if(own.some(p=>inherited.some(q=>fold(p.name)===fold(q.name))))fail('E_INVARG','Conflicting inherited property');
+      const properties=[...inherited.map(p=>current.properties.find(q=>q.origin===p.origin&&fold(q.name)===fold(p.name))??{...p,owner:p.perms.includes('c')?current.owner:p.owner,value:null}),...own];
+      const updated={...current,parent:newParent?.id??-1n,properties};updates.set(current.id,updated);
+      budget?.step(this.#objects.size);for(const child of this.children(current.id))visit(child,updated,depth+1);
+    };
+    visit(object,ancestry[0],ancestry.length+1);
+    this.commit([...updates.values()],[],this.#nextId,budget);
+  }
+  relocate(id: bigint, destination: bigint, position = 0, budget?: Budget): void {
+    if(!Number.isSafeInteger(position)||position<0)fail('E_INVARG');
+    const object=this.get(id);if(destination!==-1n)this.get(destination);
+    let ancestor=destination;while(ancestor!==-1n){budget?.step();if(ancestor===id)fail('E_RECMOVE');ancestor=this.get(ancestor).location??-1n;}
+    const updates=new Map<bigint,ObjectData>(),old=object.location??-1n;
+    if(old===destination&&position===0)return;
+    if(old!==-1n){const container=this.get(old);updates.set(old,{...container,contents:(container.contents??[]).filter(child=>child!==id)});}
+    if(destination!==-1n){const container=updates.get(destination)??this.get(destination),contents=[...(container.contents??[])];contents.splice(position===0?contents.length:Math.min(position-1,contents.length),0,id);updates.set(destination,{...container,contents});}
+    updates.set(id,{...object,location:destination});this.commit([...updates.values()],[],this.#nextId,budget);
   }
   property(id: bigint, name: string, budget?: Budget): PropertyData {
     const properties = this.get(id).properties;
@@ -218,8 +297,8 @@ export class World {
     const object = this.get(id, true), key = fold(name);
     if (key === 'name') return moo.string(object.name);
     if (key === 'owner') return moo.object(object.owner);
-    if (key === 'location') return moo.object(-1);
-    if (key === 'contents') return moo.list([]);
+    if (key === 'location') return moo.object(object.location ?? -1n);
+    if (key === 'contents') { budget?.allocate(object.contents?.length ?? 0); return moo.list((object.contents ?? []).map(moo.object)); }
     if (Object.hasOwn(object.flags, key)) return moo.int(object.flags[key as keyof ObjectData['flags']]);
     for (const ancestor of this.ancestors(id, budget)) {
       budget?.step(ancestor.properties.reduce((sum, prop) => sum + prop.name.length + 1, name.length));
@@ -233,7 +312,7 @@ export class World {
     const object = this.get(id, true), key = fold(name);
     this.validateValue(value, budget);
     let update: ObjectData;
-    if (key === 'location' || key === 'contents') fail('E_PERM', 'Movement is not supported; containment properties are read-only');
+    if (key === 'location' || key === 'contents') fail('E_PERM', 'Containment properties are read-only; use move()');
     if (key === 'name') { if (value.type !== 'string') fail('E_TYPE'); update = { ...object, name: value.value }; }
     else if (key === 'owner') { if (value.type !== 'object') fail('E_TYPE'); if (!this.valid(value.value)) fail('E_INVARG'); update = { ...object, owner: value.value }; }
     else if (Object.hasOwn(object.flags, key)) {

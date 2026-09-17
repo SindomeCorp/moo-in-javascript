@@ -1,0 +1,100 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      dist-tag: ${{ steps.release.outputs.dist-tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - id: release
+        run: node scripts/release.mjs validate
+
+  verify:
+    needs: guard
+    uses: ./.github/workflows/ci.yml
+
+  package:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install --global npm@11.15.0
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Build and pack release artifact
+        id: pack
+        run: |
+          npm pack --json > pack.json
+          node --input-type=module -e "import fs from 'node:fs'; const [pack] = JSON.parse(fs.readFileSync('pack.json', 'utf8')); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'tarball=' + pack.filename + '\n');"
+      - name: Test the release artifact
+        env:
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+        run: node scripts/test-package.mjs "$TARBALL"
+      - name: Rehearse publication without uploading
+        env:
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+        run: npm publish "$TARBALL" --dry-run --ignore-scripts --access public
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-package
+          path: ${{ steps.pack.outputs.tarball }}
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    needs: [guard, package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: npm install --global npm@11.15.0
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-package
+          path: release-artifact
+      - name: Check for an existing version
+        id: registry
+        run: node scripts/release.mjs status
+      - name: Publish tested artifact using npm trusted publishing
+        if: steps.registry.outputs.status == 'new'
+        env:
+          DIST_TAG: ${{ needs.guard.outputs.dist-tag }}
+        run: |
+          artifacts=(release-artifact/*.tgz)
+          test "${#artifacts[@]}" -eq 1
+          npm publish "${artifacts[0]}" --ignore-scripts --access public --tag "$DIST_TAG"

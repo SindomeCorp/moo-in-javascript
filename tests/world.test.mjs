@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { inspect } from 'node:util';
 import { createRuntime, createWorld, moo, HostError } from '../dist/index.js';
 import { createTeachingWorld } from '../dist/fixtures/index.js';
+import { createTestWorld } from './helpers/world.mjs';
 
 const context = { this: moo.object(42), player: moo.object(7), caller: moo.object(7), verb: 'test' };
 function completed(result) {
@@ -15,7 +16,7 @@ for (const profile of ['lambdamoo', 'toaststunt']) {
     const runtime = await createRuntime({ profile }), world = createTeachingWorld({ profile }), events = [];
     try {
       const result = runtime.run('this.("lamp_on")=1; player:("tell")("lamp=",this.lamp_on); return $room;', { world, context, runId: 'lesson', onOutput: event => events.push(event) });
-      assert.deepEqual(completed(result), moo.object(1));
+      assert.deepEqual(completed(result), moo.object(3));
       assert.equal(world.getProperty(42n, 'lamp_on').value, 1n);
       assert.deepEqual(result.output, events);
       assert.deepEqual(events.map(e => [e.runId, e.sequence, e.recipient.value, e.text]), [['lesson', 0, 7n, 'lamp=1']]);
@@ -64,7 +65,7 @@ for (const profile of ['lambdamoo', 'toaststunt']) {
 }
 
 test('metadata edits/deletions propagate definitions and preserve inherited overrides', async () => {
-  const profile = 'toaststunt', runtime = await createRuntime({ profile }), world = createTeachingWorld({ profile });
+  const profile = 'toaststunt', runtime = await createRuntime({ profile }), world = createTestWorld({ profile });
   try {
     const result = runtime.run('p=create(#-1); add_property(p,"score",1,{player,"rw"}); c=create(p); c.score=5; set_property_info(p,"score",{player,"rwc","total"}); value={c.total,property_info(p,"total"),properties(p)}; delete_property(p,"total"); return {value,properties(p)};', { world, context });
     assert.deepEqual(completed(result), moo.list([moo.list([moo.int(5), moo.list([moo.object(7), moo.string('rwc')]), moo.list([moo.string('total')])]), moo.list([])]));
@@ -74,7 +75,7 @@ test('metadata edits/deletions propagate definitions and preserve inherited over
 });
 
 test('call limits bypass catches and nested errors include receiver/source frames', async () => {
-  const profile = 'toaststunt', runtime = await createRuntime({ profile }), world = createTeachingWorld({ profile });
+  const profile = 'toaststunt', runtime = await createRuntime({ profile }), world = createTestWorld({ profile });
   world.addVerb(42n, { names: 'recurse', owner: 7n, perms: 'rx', args: ['none', 'none', 'none'], source: 'try return this:recurse(); except (ANY) return 7; endtry' });
   world.addVerb(42n, { names: 'bad', owner: 7n, perms: 'rx', args: ['none', 'none', 'none'], source: 'return 1/0;' });
   world.addVerb(42n, { names: 'localcatch', owner: 7n, perms: 'rx', args: ['none', 'none', 'none'], source: 'try 1/0; except e (ANY) return length(e[4]); endtry' });
@@ -107,16 +108,16 @@ test('world quotas reject whole mutations without reusing IDs', async () => {
 });
 
 test('verb abbreviations, canonical prepositions and exhausted lifecycle deltas are explicit', async () => {
-  const profile = 'toaststunt', runtime = await createRuntime({ profile }), world = createTeachingWorld({ profile });
+  const profile = 'toaststunt', runtime = await createRuntime({ profile }), world = createTestWorld({ profile });
   try {
     const result = runtime.run('add_verb(this,{player,"rx","a*nswer alias"},{"this","from","any"}); set_verb_code(this,1,{"return 9;"}); return {this:a(),this:ans(),this:alias(),verb_args(this,1)};', { world, context });
     assert.deepEqual(completed(result), moo.list([moo.int(9), moo.int(9), moo.int(9), moo.list([moo.string('this'), moo.string('out of/from inside/from'), moo.string('any')])]));
     const lifetime = runtime.run('o=create(#-1); recycle(o);', { world, context });
     assert.deepEqual(lifetime.changes, [{ kind: 'allocation-state', before: 43n, after: 44n }]);
     world.addVerb(1n, { names: 'initialize', owner: 7n, perms: 'rx', args: ['none', 'none', 'none'], source: 'return;' });
-    const blockedHook = runtime.run('create(#1);', { world, context });
-    assert.equal(blockedHook.status, 'runtime-error');
-    assert.match(blockedHook.diagnostics[0].message, /initialize lifecycle hooks/);
-    assert.equal(world.nextId, 44n);
+    const initialized = runtime.run('return create(#1);', { world, context });
+    assert.equal(initialized.status, 'completed');
+    assert.deepEqual(initialized.value, moo.object(44));
+    assert.equal(world.nextId, 45n);
   } finally { runtime.dispose(); }
 });

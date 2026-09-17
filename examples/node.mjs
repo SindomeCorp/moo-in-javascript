@@ -1,6 +1,6 @@
-import { createRuntime, createWorkerSession, moo, encodeValue } from '../dist/index.js';
-import { nodeWorkerFactory } from '../dist/worker/node-client.js';
-import { createTeachingWorld } from '../dist/fixtures/index.js';
+import { createRuntime, createWorkerSession, moo, encodeValue } from '@sindomecorp/moo-in-javascript';
+import { nodeWorkerFactory } from '@sindomecorp/moo-in-javascript/node-worker';
+import { createTeachingWorld } from '@sindomecorp/moo-in-javascript/fixtures';
 const runtime = await createRuntime({ profile: 'toaststunt' });
 try {
   const session = createWorkerSession({ runtime, world: createTeachingWorld({ profile: runtime.profile }), workerFactory: nodeWorkerFactory() });

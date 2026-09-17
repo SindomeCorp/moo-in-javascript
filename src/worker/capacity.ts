@@ -8,7 +8,7 @@ export function transferCapacity(limits: Required<WorldLimits>): Required<Snapsh
   // value tags, decimal IDs, flags, property metadata and complete verb records.
   const maxCharacters = 1024 + 6 * limits.stringUnits + 128 * limits.valueNodes
     + 512 * limits.objects + 256 * limits.properties + 512 * limits.verbs;
-  const maxNodes = 20 + 4 * limits.valueNodes + 20 * limits.objects
+  const maxNodes = 20 + limits.stringUnits + 4 * limits.valueNodes + 20 * limits.objects
     + 10 * limits.properties + 12 * limits.verbs;
   if (!Number.isSafeInteger(maxCharacters) || !Number.isSafeInteger(maxNodes)) throw new HostError('World quotas exceed safe worker transfer capacity');
   return { maxCharacters, maxNodes, maxDepth: 512 };
