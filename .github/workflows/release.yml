@@ -33,7 +33,7 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   package:
-    needs: verify
+    needs: [guard, verify]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -56,10 +56,15 @@ jobs:
         env:
           TARBALL: ${{ steps.pack.outputs.tarball }}
         run: node scripts/test-package.mjs "$TARBALL"
+      - name: Check for an existing version before rehearsal
+        id: registry
+        run: node scripts/release.mjs status
       - name: Rehearse publication without uploading
+        if: steps.registry.outputs.status == 'new'
         env:
           TARBALL: ${{ steps.pack.outputs.tarball }}
-        run: npm publish "$TARBALL" --dry-run --ignore-scripts --access public
+          DIST_TAG: ${{ needs.guard.outputs.dist-tag }}
+        run: npm publish "$TARBALL" --dry-run --ignore-scripts --access public --tag "$DIST_TAG"
       - uses: actions/upload-artifact@v4
         with:
           name: npm-package

@@ -3,6 +3,14 @@
 Release notes are maintained manually. This package is pre-1.0; compatibility
 changes are called out here before publication.
 
+## 0.2.4 — 2026-09-17
+
+- Updates the README and installation instructions for the published npm package.
+- Records the initial release date and focuses the maintainer guide on future releases.
+- Skips the release publication dry run when the version already exists on npm,
+  allowing duplicate releases and workflow retries to complete successfully.
+- Uses the selected npm distribution tag during the publication dry run.
+
 ## 0.2.3 — 2026-09-17
 
 Initial public release on [npm](https://www.npmjs.com/package/@sindomecorp/moo-in-javascript/v/0.2.3).
