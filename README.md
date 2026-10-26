@@ -231,3 +231,15 @@ artifacts. Packaged grammar and runtime license notices accompany the WASM asset
 
 This product includes software developed or owned by Caldera International, Inc.
 See [third-party notices](https://github.com/SindomeCorp/moo-in-javascript/blob/main/docs/third-party-notices.md).
+
+## Node.js 26 validation
+
+Validated on Linux with **Node.js 26.12.1** on **2026-10-26**. The build, Node test suite, and clean packed-consumer checks passed, including the TypeScript and browser package consumers. The Playwright suite also passed (9 tests).
+
+With Node.js 26.12.1 selected, reproduce the checks with:
+
+```sh
+npm test
+npm run test:package
+npm run test:browser
+```
